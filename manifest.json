@@ -1,0 +1,15 @@
+{
+  "name": "Custom Navigation Bar",
+  "version": "1.0.0",
+  "fullpage": true,
+  "size": {
+    "width": 12,
+    "height": 2
+  },
+  "mapping": [],
+  "ignore": [
+    "README.md",
+    ".git",
+    ".gitignore"
+  ]
+}
