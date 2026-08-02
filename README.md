@@ -61,56 +61,55 @@ Open `index.html` in a browser (or `python3 -m http.server` from this folder). I
 
 ## Populating options from a live Domo dataset
 
-`index.html` already does this end-to-end — Brand / Master ID / Owner / Territory are no longer hardcoded, they're pulled from a dataset at load time. To point it at your real data:
+`index.html` already does this end-to-end — Brand / Master ID / Owner / Territory are pulled from the `BudgetBlindsData` dataset at load time, not hardcoded. This matches the real `manifest.json` in this project:
 
-1. **Find your dataset's ID** — open the dataset in Domo's Data Center; the ID is the GUID in the page URL.
-2. **Add it to `manifest.json`**, under `mapping` (already scaffolded):
-   ```json
-   "mapping": [
-     { "alias": "filterData", "dataSetId": "<your-dataset-guid>", "fields": [] }
-   ]
-   ```
-   `filterData` is just a name your code uses to refer to this dataset — it doesn't need to match anything in Domo. This `dataSetId` is what `domo dev` proxies against locally; once the app is published and added to a page, Domo's card-setup screen ("Select Dataset") is what actually binds the alias to a real dataset, so point it at the same one there.
-3. **Match the column names**, in `index.html`:
-   ```js
-   var DATASET_ALIAS = "filterData"; // must match manifest.json's alias
+```json
+"datasetsMapping": [
+  {
+    "dataSetId": "f708d305-0238-4727-9fa1-80e7efa4d7d8",
+    "alias": "BudgetBlindsData",
+    "fields": [
+      { "alias": "Brand",       "columnName": "Brand" },
+      { "alias": "HFCMasterID", "columnName": "HFCMasterID" },
+      { "alias": "Owner",       "columnName": "FranchiseName" },
+      { "alias": "TerrNumName", "columnName": "TerrNum" }
+    ],
+    "dql": null
+  }
+]
+```
 
-   var LIVE_FILTERS = [
-     { id: "brand",     column: "Brand",     allLabel: "All Brands" },
-     { id: "masterId",  column: "Master ID", allLabel: "All IDs" },
-     { id: "owner",     column: "Owner",     allLabel: "All Owners" },
-     { id: "territory", column: "Territory", allLabel: "All Territories" }
-   ];
-   ```
-   Change each `column` value to the exact (case-sensitive) column header in your dataset.
-4. That's it — `loadLiveFilterOptions()` runs one `domo.get('/data/v1/filterData?fields=...&groupby=...')` per filter, builds an `[{label, value}, ...]` list from the distinct values, and calls `navBar.setOptions(id, options)`.
+The important part: each field has an **alias** (what your code queries by) and a **columnName** (the real header in the dataset). They can differ — e.g. `Owner` resolves to the actual column `FranchiseName`, `TerrNumName` resolves to `TerrNum`. That indirection is intentional: it's set from Domo's data-configuration screen when the app is added as a card, so a page owner can repoint fields at different columns later without touching this code.
 
-This only runs when a real Domo runtime is present (`typeof domo !== "undefined"` — true inside `domo dev` and once published). Opening `index.html` directly in a plain browser still works, falling back to the small `MOCK_OPTIONS` object at the top of the script, so you can keep designing without needing a live dataset connection.
+`index.html` queries by the **field alias**, not the raw column name:
 
-Add more dataset-driven filters the same way: add an entry to `LIVE_FILTERS` and a matching filter definition in the `filters` array passed to `new DomoNavBar(...)`.
+```js
+var DATASET_ALIAS = "BudgetBlindsData"; // matches datasetsMapping[0].alias
+
+var LIVE_FILTERS = [
+  { id: "brand",     column: "Brand",       allLabel: "All Brands" },
+  { id: "masterId",  column: "HFCMasterID", allLabel: "All IDs" },
+  { id: "owner",     column: "Owner",       allLabel: "All Owners" },
+  { id: "territory", column: "TerrNumName", allLabel: "All Territories" }
+];
+```
+
+`loadLiveFilterOptions()` runs one `domo.get('/data/v1/BudgetBlindsData?fields=<alias>&groupby=<alias>')` per filter, builds an `[{label, value}, ...]` list from the distinct values in the response, and calls `navBar.setOptions(id, options)`.
+
+This only runs when a real Domo runtime is present (`typeof domo !== "undefined"` — true inside `domo dev` and once published). Opening `index.html` directly in a plain browser still works, falling back to the small `MOCK_OPTIONS` object at the top of the script, so you can keep designing without a live dataset connection.
+
+To add more dataset-driven filters: add a field to `datasetsMapping[0].fields` in `manifest.json` (via Domo's data-config UI, or by hand), then add a matching entry to `LIVE_FILTERS` and to the `filters` array passed to `new DomoNavBar(...)`.
+
+**If `loadLiveFilterOptions()` comes back empty**, log the raw response once (`console.log(rows)` inside the `.then`) — if rows come back keyed by the real `columnName` instead of the `alias` on your Domo instance/version, swap `row[f.column]` to look up the column name instead.
 
 ## The manifest.json
 
-Domo custom apps (Dev Studio / App Framework apps, published with the `ryuu`/`domo` CLI) require a `manifest.json` at the project root — the CLI won't build, preview, or publish without one. This project already includes one:
+Domo custom apps (Dev Studio / App Framework apps, published with the `ryuu`/`domo` CLI) require a `manifest.json` at the project root — the CLI won't build, preview, or publish without one.
 
-```json
-{
-  "name": "Custom Navigation Bar",
-  "version": "1.0.0",
-  "fullpage": true,
-  "size": { "width": 12, "height": 2 },
-  "mapping": [
-    { "alias": "filterData", "dataSetId": "PUT-YOUR-DATASET-ID-HERE", "fields": [] }
-  ],
-  "ignore": ["README.md", ".git", ".gitignore"]
-}
-```
-
-- **name / version** — required; how the app design shows up in Domo.
-- **fullpage** — lets the app stretch to fill its container's width, appropriate for a bar meant to span the top of a page rather than sit in a fixed-size card.
-- **size** — the default width/height (in grid units) used for local dev preview; resize the card after adding it to your page.
-- **mapping** — dataset aliases the app queries via `domo.get`. Replace `PUT-YOUR-DATASET-ID-HERE` with your real dataset's GUID — see "Populating options from a live Domo dataset" below for the full hookup.
-- **id** — intentionally omitted; the CLI injects it automatically into `manifest.json` the first time you publish. Don't hand-write one.
+- **id** — assigned by Domo the first time the app is created/published; don't hand-edit it.
+- **name / version** — how the app design shows up in Domo.
+- **size** — the default width/height (in grid units) used for local dev preview and as the card's starting size; resize after adding it to your page.
+- **datasetsMapping** — the dataset(s) the app queries via `domo.get`, keyed by `alias`, with a `fields` array of `{alias, columnName}` pairs (see above). `dql` is an optional raw-query override per mapping; leave it `null` unless you need custom SQL instead of simple field/groupby queries.
 
 ### Publishing this app to Domo
 

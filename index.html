@@ -48,20 +48,19 @@
 <script src="js/nav-bar.js"></script>
 <script>
   // ---------------------------------------------------------
-  // 1. Dataset wiring — edit these three things for your app:
-  //    a) DATASET_ALIAS must match the "alias" you gave this dataset
-  //       in manifest.json's mapping array.
-  //    b) LIVE_FILTERS.column must match the exact column header in
-  //       your Domo dataset (case-sensitive; spaces are fine).
-  //    c) allLabel is just the "(All ...)" option shown by default.
+  // 1. Dataset wiring — these match manifest.json's datasetsMapping:
+  //    DATASET_ALIAS is the dataset's "alias" ("BudgetBlindsData").
+  //    Each LIVE_FILTERS.column is a field ALIAS from that mapping's
+  //    "fields" array (not the raw columnName) — e.g. "Owner" resolves
+  //    to the real column "FranchiseName" per manifest.json.
   // ---------------------------------------------------------
-  var DATASET_ALIAS = "filterData";
+  var DATASET_ALIAS = "BudgetBlindsData";
 
   var LIVE_FILTERS = [
-    { id: "brand",     column: "Brand",     allLabel: "All Brands" },
-    { id: "masterId",  column: "Master ID", allLabel: "All IDs" },
-    { id: "owner",     column: "Owner",     allLabel: "All Owners" },
-    { id: "territory", column: "Territory", allLabel: "All Territories" }
+    { id: "brand",     column: "Brand",       allLabel: "All Brands" },
+    { id: "masterId",  column: "HFCMasterID", allLabel: "All IDs" },
+    { id: "owner",     column: "Owner",       allLabel: "All Owners" },
+    { id: "territory", column: "TerrNumName", allLabel: "All Territories" }
   ];
 
   // Only used when this page is opened outside of Domo (no `domo` global),

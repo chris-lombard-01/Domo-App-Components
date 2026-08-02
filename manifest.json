@@ -1,21 +1,34 @@
 {
-  "name": "Custom Navigation Bar",
-  "version": "1.0.0",
-  "fullpage": true,
-  "size": {
-    "width": 12,
-    "height": 2
-  },
-  "mapping": [
-    {
-      "alias": "filterData",
-      "dataSetId": "PUT-YOUR-DATASET-ID-HERE",
-      "fields": []
-    }
-  ],
-  "ignore": [
-    "README.md",
-    ".git",
-    ".gitignore"
-  ]
+   "id": "0b046e32-0ef9-46b9-87bc-8a22aa4b438b",
+   "name": "Claude Nav",
+   "version": "0.0.1",
+   "datasetsMapping": [
+      {
+         "dataSetId": "f708d305-0238-4727-9fa1-80e7efa4d7d8",
+         "alias": "BudgetBlindsData",
+         "fields": [
+            {
+               "alias": "Brand",
+               "columnName": "Brand"
+            },
+            {
+               "alias": "HFCMasterID",
+               "columnName": "HFCMasterID"
+            },
+            {
+               "alias": "Owner",
+               "columnName": "FranchiseName"
+            },
+            {
+               "alias": "TerrNumName",
+               "columnName": "TerrNum"
+            }
+         ],
+         "dql": null
+      }
+   ],
+   "size": {
+      "width": 12,
+      "height": 2
+   }
 }
