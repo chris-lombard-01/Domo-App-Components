@@ -51,17 +51,25 @@
   // 1. Dataset wiring — these match manifest.json's datasetsMapping:
   //    DATASET_ALIAS is the dataset's "alias" ("BudgetBlindsData").
   //    Each LIVE_FILTERS.column is a field ALIAS from that mapping's
-  //    "fields" array (not the raw columnName) — e.g. "Owner" resolves
-  //    to the real column "FranchiseName" per manifest.json.
+  //    "fields" array — used for domo.get() calls made BY THIS APP.
+  //    filterColumn is the real columnName — used when pushing a page
+  //    filter to OTHER cards via domo.filterContainer(), since those
+  //    cards only know the dataset's actual column names, not this
+  //    app's private field aliases.
   // ---------------------------------------------------------
   var DATASET_ALIAS = "BudgetBlindsData";
 
   var LIVE_FILTERS = [
-    { id: "brand",     column: "Brand",       allLabel: "All Brands" },
-    { id: "masterId",  column: "HFCMasterID", allLabel: "All IDs" },
-    { id: "owner",     column: "Owner",       allLabel: "All Owners" },
-    { id: "territory", column: "TerrNumName", allLabel: "All Territories" }
+    { id: "brand",     column: "Brand",       filterColumn: "Brand",         allLabel: "All Brands" },
+    { id: "masterId",  column: "HFCMasterID", filterColumn: "HFCMasterID",   allLabel: "All IDs" },
+    { id: "owner",     column: "Owner",       filterColumn: "FranchiseName", allLabel: "All Owners" },
+    { id: "territory", column: "TerrNumName", filterColumn: "TerrNum",       allLabel: "All Territories" }
   ];
+
+  // Set this to your date column's real name to make Reporting Period
+  // (MTD/QTD/YTD/Custom) push a date-range filter to the rest of the page.
+  // Leave null to skip period filtering until you wire it up.
+  var DATE_FILTER_COLUMN = null;
 
   // Only used when this page is opened outside of Domo (no `domo` global),
   // so the preview still looks/works right at design time.
@@ -166,15 +174,70 @@
   }
   renderState();
 
+  // ---------------------------------------------------------
+  // 3. Push the current selections to the REST OF THE PAGE.
+  //    domo.filterContainer() applies a page-level filter that Domo
+  //    runs against every other card on this App Studio page built
+  //    on a dataset containing the named column — those cards don't
+  //    need to be part of this app, they just need to share the
+  //    column being filtered on.
+  // ---------------------------------------------------------
+  function buildPageFilters(state) {
+    var filters = [];
+
+    LIVE_FILTERS.forEach(function (f) {
+      if (state[f.id] && state[f.id] !== "all") {
+        filters.push({
+          column: f.filterColumn,
+          operator: "EQUALS",
+          values: [state[f.id]],
+          dataType: "STRING"
+        });
+      }
+    });
+
+    if (DATE_FILTER_COLUMN) {
+      var range = getDateRangeForPeriod(state.reportingPeriod, state.customRange);
+      if (range) {
+        filters.push({
+          column: DATE_FILTER_COLUMN,
+          operator: "BETWEEN",
+          values: [range.start, range.end],
+          dataType: "DATE"
+        });
+      }
+    }
+
+    return filters;
+  }
+
+  function getDateRangeForPeriod(period, customRange) {
+    var now = new Date();
+    var start;
+    if (period === "MTD") {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (period === "QTD") {
+      start = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+    } else if (period === "YTD") {
+      start = new Date(now.getFullYear(), 0, 1);
+    } else if (period === "Custom") {
+      if (!customRange.start || !customRange.end) return null;
+      return { start: customRange.start, end: customRange.end };
+    } else {
+      return null;
+    }
+    return { start: toISODate(start), end: toISODate(now) };
+  }
+
+  function toISODate(d) {
+    return d.toISOString().slice(0, 10);
+  }
+
   navBar.onChange(function (detail) {
     renderState();
-    // ---------------------------------------------------------
-    // Hook point: forward the updated filter state into whatever
-    // queries drive your charts, e.g.:
-    //
-    // domo.get('/data/v1/salesDataset?' + buildQuery(detail.state))
-    //   .then(function (rows) { renderCharts(rows); });
-    // ---------------------------------------------------------
+    if (IS_LIVE) {
+      domo.filterContainer(buildPageFilters(detail.state));
+    }
     console.log("Filter changed:", detail);
   });
 </script>
