@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Domo App Studio — Custom Nav Bar Preview</title>
+<link rel="stylesheet" href="css/nav-bar.css" />
+<style>
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    background: #fafbfb;
+  }
+  #app-body {
+    padding: 24px;
+    color: #33393a;
+  }
+  #app-body h2 { font-size: 16px; margin: 0 0 8px; }
+  #app-body p { font-size: 13px; color: #6b7271; }
+  pre#state-output {
+    background: #ffffff;
+    border: 1px solid #e0e4e3;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: #33393a;
+    max-width: 480px;
+    overflow-x: auto;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Mount point for the custom nav bar -->
+  <div id="domo-nav-bar"></div>
+
+  <div id="app-body">
+    <h2>App Studio content area</h2>
+    <p>This is a placeholder for your existing charts / vizzes. The nav bar above is fully self-contained — drop the markup, CSS, and JS into your App Studio app's index.html.</p>
+    <p><strong>Live filter state</strong> (updates on every change — this is what you'd forward into your <code>domo.get</code> calls):</p>
+    <pre id="state-output">{}</pre>
+  </div>
+
+<script src="js/nav-bar.js"></script>
+<script>
+  // ---------------------------------------------------------
+  // Mock option data — replace with real values pulled from your
+  // Domo dataset, e.g. via domo.get('/data/v1/<datasetAlias>?...')
+  // ---------------------------------------------------------
+  var navBar = new DomoNavBar("#domo-nav-bar", {
+    title: "Sales Performance",
+    filters: [
+      {
+        id: "brand",
+        label: "Brand",
+        placeholder: "All Brands",
+        defaultValue: "all",
+        options: [
+          { label: "All Brands", value: "all" },
+          { label: "Acme Co.", value: "acme" },
+          { label: "Northwind", value: "northwind" },
+          { label: "Globex", value: "globex" },
+          { label: "Initech", value: "initech" }
+        ]
+      },
+      {
+        id: "masterId",
+        label: "Master ID",
+        placeholder: "All IDs",
+        defaultValue: "all",
+        options: [
+          { label: "All IDs", value: "all" },
+          { label: "MID-10231", value: "10231" },
+          { label: "MID-10245", value: "10245" },
+          { label: "MID-10298", value: "10298" },
+          { label: "MID-10312", value: "10312" },
+          { label: "MID-10399", value: "10399" },
+          { label: "MID-10410", value: "10410" },
+          { label: "MID-10456", value: "10456" }
+        ]
+      },
+      {
+        id: "owner",
+        label: "Owner",
+        placeholder: "All Owners",
+        defaultValue: "all",
+        options: [
+          { label: "All Owners", value: "all" },
+          { label: "J. Alvarez", value: "jalvarez" },
+          { label: "T. Nguyen", value: "tnguyen" },
+          { label: "R. Patel", value: "rpatel" },
+          { label: "S. Kim", value: "skim" }
+        ]
+      },
+      {
+        id: "territory",
+        label: "Territory",
+        placeholder: "All Territories",
+        defaultValue: "all",
+        options: [
+          { label: "All Territories", value: "all" },
+          { label: "Northeast", value: "ne" },
+          { label: "Southeast", value: "se" },
+          { label: "Midwest", value: "mw" },
+          { label: "West", value: "west" },
+          { label: "International", value: "intl" }
+        ]
+      }
+    ],
+    periods: ["MTD", "QTD", "YTD", "Custom"],
+    defaultPeriod: "MTD",
+    trailingFilters: [
+      {
+        id: "compare",
+        label: "Compare",
+        placeholder: "No Comparison",
+        defaultValue: "none",
+        searchable: false,
+        options: [
+          { label: "No Comparison", value: "none" },
+          { label: "Prior Period", value: "prior_period" },
+          { label: "Prior Year", value: "prior_year" },
+          { label: "Budget", value: "budget" },
+          { label: "Forecast", value: "forecast" }
+        ]
+      }
+    ]
+  });
+
+  var stateOutput = document.getElementById("state-output");
+  function renderState() {
+    stateOutput.textContent = JSON.stringify(navBar.getState(), null, 2);
+  }
+  renderState();
+
+  navBar.onChange(function (detail) {
+    renderState();
+    // ---------------------------------------------------------
+    // Hook point: forward the updated filter state into your
+    // Domo data calls here, e.g.:
+    //
+    // domo.get('/data/v1/salesDataset?' + buildQuery(detail.state))
+    //   .then(function (rows) { renderCharts(rows); });
+    // ---------------------------------------------------------
+    console.log("Filter changed:", detail);
+  });
+</script>
+</body>
+</html>

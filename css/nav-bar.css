@@ -1,0 +1,366 @@
+/* =========================================================
+   Custom Domo App Studio Navigation Bar
+   Theme: subtle gray bar, seafoam-green accent, compact caps labels
+   ========================================================= */
+
+:root {
+  --dnb-bg: #f4f6f6;               /* subtle gray bar background */
+  --dnb-border: #e0e4e3;
+  --dnb-divider: #d8dcdb;
+
+  --dnb-accent: #4fb98e;           /* seafoam green */
+  --dnb-accent-dark: #3a9b74;      /* hover / pressed */
+  --dnb-accent-light: #e3f5ee;     /* tints / selected bg */
+
+  --dnb-text: #33393a;             /* value text */
+  --dnb-label: #8a9291;            /* uppercase small labels */
+  --dnb-placeholder: #a6adac;
+
+  --dnb-panel-bg: #ffffff;
+  --dnb-panel-shadow: 0 8px 24px rgba(20, 30, 28, 0.12);
+
+  --dnb-radius: 8px;
+  --dnb-radius-sm: 6px;
+  --dnb-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+}
+
+.dnb {
+  font-family: var(--dnb-font);
+  background: var(--dnb-bg);
+  border-bottom: 1px solid var(--dnb-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 8px 20px;
+  box-sizing: border-box;
+  width: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+.dnb * { box-sizing: border-box; }
+
+/* Left: app title / logo slot */
+.dnb-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--dnb-text);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.dnb-brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dnb-accent);
+  flex: none;
+}
+
+/* Right: filter cluster */
+.dnb-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.dnb-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 6px;
+  background: var(--dnb-divider);
+  flex: none;
+}
+
+/* ---------- Single dropdown filter (Brand, Master ID, Owner, Territory, Compare) ---------- */
+
+.dnb-filter {
+  position: relative;
+  flex: none;
+}
+
+.dnb-label {
+  display: block;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--dnb-label);
+  margin: 0 0 2px 10px;
+}
+
+.dnb-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 108px;
+  background: var(--dnb-panel-bg);
+  border: 1px solid var(--dnb-border);
+  border-radius: var(--dnb-radius);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--dnb-text);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.dnb-control:hover {
+  border-color: var(--dnb-accent);
+}
+
+.dnb-control:focus-visible,
+.dnb-filter.open .dnb-control {
+  border-color: var(--dnb-accent);
+  box-shadow: 0 0 0 3px var(--dnb-accent-light);
+  outline: none;
+}
+
+.dnb-control-value {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.dnb-control-value.is-placeholder {
+  color: var(--dnb-placeholder);
+  font-weight: 400;
+}
+
+.dnb-chevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--dnb-label);
+  transition: transform .15s ease;
+}
+
+.dnb-filter.open .dnb-chevron {
+  transform: rotate(180deg);
+  color: var(--dnb-accent-dark);
+}
+
+/* Active-filter indicator (dot on control when a non-default value is selected) */
+.dnb-control.has-value {
+  border-color: var(--dnb-accent);
+  background: var(--dnb-accent-light);
+}
+.dnb-control.has-value .dnb-control-value { color: var(--dnb-accent-dark); font-weight: 600; }
+.dnb-control.has-value .dnb-chevron { color: var(--dnb-accent-dark); }
+
+/* ---------- Dropdown panel ---------- */
+
+.dnb-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 200px;
+  max-width: 280px;
+  background: var(--dnb-panel-bg);
+  border: 1px solid var(--dnb-border);
+  border-radius: var(--dnb-radius);
+  box-shadow: var(--dnb-panel-shadow);
+  padding: 6px;
+  z-index: 1000;
+  display: none;
+}
+
+.dnb-filter.open .dnb-panel { display: block; }
+
+.dnb-panel-search {
+  width: 100%;
+  padding: 7px 9px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid var(--dnb-border);
+  border-radius: var(--dnb-radius-sm);
+  color: var(--dnb-text);
+}
+
+.dnb-panel-search:focus {
+  outline: none;
+  border-color: var(--dnb-accent);
+  box-shadow: 0 0 0 3px var(--dnb-accent-light);
+}
+
+.dnb-options {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.dnb-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px;
+  font-size: 13px;
+  color: var(--dnb-text);
+  border-radius: var(--dnb-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dnb-option:hover {
+  background: var(--dnb-accent-light);
+}
+
+.dnb-option.selected {
+  background: var(--dnb-accent-light);
+  color: var(--dnb-accent-dark);
+  font-weight: 600;
+}
+
+.dnb-option-check {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--dnb-accent);
+  visibility: hidden;
+}
+
+.dnb-option.selected .dnb-option-check {
+  visibility: visible;
+}
+
+.dnb-empty {
+  padding: 12px 9px;
+  font-size: 12px;
+  color: var(--dnb-placeholder);
+  text-align: center;
+}
+
+/* ---------- Reporting Period segmented control ---------- */
+
+.dnb-period {
+  flex: none;
+}
+
+.dnb-segmented {
+  display: flex;
+  align-items: center;
+  background: var(--dnb-panel-bg);
+  border: 1px solid var(--dnb-border);
+  border-radius: var(--dnb-radius);
+  padding: 2px;
+  gap: 2px;
+}
+
+.dnb-segment {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--dnb-label);
+  padding: 5px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+  white-space: nowrap;
+}
+
+.dnb-segment:hover {
+  color: var(--dnb-accent-dark);
+}
+
+.dnb-segment.active {
+  background: var(--dnb-accent);
+  color: #ffffff;
+}
+
+/* Custom date range popover */
+.dnb-custom-range {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--dnb-panel-bg);
+  border: 1px solid var(--dnb-border);
+  border-radius: var(--dnb-radius);
+  box-shadow: var(--dnb-panel-shadow);
+  padding: 12px;
+  z-index: 1000;
+  display: none;
+  min-width: 230px;
+}
+
+.dnb-period.open .dnb-custom-range { display: block; }
+
+.dnb-custom-range label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dnb-label);
+  margin: 8px 0 4px;
+}
+
+.dnb-custom-range label:first-child { margin-top: 0; }
+
+.dnb-custom-range input[type="date"] {
+  width: 100%;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  border: 1px solid var(--dnb-border);
+  border-radius: var(--dnb-radius-sm);
+  color: var(--dnb-text);
+}
+
+.dnb-custom-range input[type="date"]:focus {
+  outline: none;
+  border-color: var(--dnb-accent);
+  box-shadow: 0 0 0 3px var(--dnb-accent-light);
+}
+
+.dnb-apply-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 7px 10px;
+  background: var(--dnb-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--dnb-radius-sm);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+
+.dnb-apply-btn:hover {
+  background: var(--dnb-accent-dark);
+}
+
+/* Scrollbar polish for panels */
+.dnb-options::-webkit-scrollbar { width: 8px; }
+.dnb-options::-webkit-scrollbar-thumb { background: var(--dnb-divider); border-radius: 4px; }
+.dnb-options::-webkit-scrollbar-track { background: transparent; }
+
+/* Responsive: stack on narrow app tiles */
+@media (max-width: 760px) {
+  .dnb {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+  .dnb-filters {
+    justify-content: flex-start;
+    width: 100%;
+  }
+}
