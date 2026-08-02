@@ -194,10 +194,10 @@
     wrap.appendChild(seg);
 
     var range = el("div", "dnb-custom-range");
-    range.appendChild(el("label", null, "Start Date"));
+    range.appendChild(el("label", null, "From"));
     var start = el("input", null); start.type = "date";
     range.appendChild(start);
-    range.appendChild(el("label", null, "End Date"));
+    range.appendChild(el("label", null, "To"));
     var end = el("input", null); end.type = "date";
     range.appendChild(end);
     var apply = el("button", "dnb-apply-btn", "Apply");
