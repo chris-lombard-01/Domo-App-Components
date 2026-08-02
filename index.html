@@ -66,10 +66,9 @@
     { id: "territory", column: "TerrNumName", filterColumn: "TerrNum",       allLabel: "All Territories" }
   ];
 
-  // Set this to your date column's real name to make Reporting Period
-  // (MTD/QTD/YTD/Custom) push a date-range filter to the rest of the page.
-  // Leave null to skip period filtering until you wire it up.
-  var DATE_FILTER_COLUMN = null;
+  // Reporting Period (MTD/QTD/YTD/Custom) pushes a BETWEEN date filter
+  // on this column to the rest of the page.
+  var DATE_FILTER_COLUMN = "dt";
 
   // Only used when this page is opened outside of Domo (no `domo` global),
   // so the preview still looks/works right at design time.
