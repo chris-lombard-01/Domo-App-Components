@@ -41,72 +41,73 @@
     <pre id="state-output">{}</pre>
   </div>
 
+<!-- Provided by the Domo runtime (both `domo dev` and a published app inject this).
+     Safe to leave in even when opening this file in a plain browser — the script
+     simply won't exist there, and the code below falls back to mock data. -->
+<script src="domo.js"></script>
 <script src="js/nav-bar.js"></script>
 <script>
   // ---------------------------------------------------------
-  // Mock option data — replace with real values pulled from your
-  // Domo dataset, e.g. via domo.get('/data/v1/<datasetAlias>?...')
+  // 1. Dataset wiring — edit these three things for your app:
+  //    a) DATASET_ALIAS must match the "alias" you gave this dataset
+  //       in manifest.json's mapping array.
+  //    b) LIVE_FILTERS.column must match the exact column header in
+  //       your Domo dataset (case-sensitive; spaces are fine).
+  //    c) allLabel is just the "(All ...)" option shown by default.
   // ---------------------------------------------------------
+  var DATASET_ALIAS = "filterData";
+
+  var LIVE_FILTERS = [
+    { id: "brand",     column: "Brand",     allLabel: "All Brands" },
+    { id: "masterId",  column: "Master ID", allLabel: "All IDs" },
+    { id: "owner",     column: "Owner",     allLabel: "All Owners" },
+    { id: "territory", column: "Territory", allLabel: "All Territories" }
+  ];
+
+  // Only used when this page is opened outside of Domo (no `domo` global),
+  // so the preview still looks/works right at design time.
+  var MOCK_OPTIONS = {
+    brand: [
+      { label: "All Brands", value: "all" },
+      { label: "Acme Co.", value: "Acme Co." },
+      { label: "Northwind", value: "Northwind" },
+      { label: "Globex", value: "Globex" },
+      { label: "Initech", value: "Initech" }
+    ],
+    masterId: [
+      { label: "All IDs", value: "all" },
+      { label: "MID-10231", value: "MID-10231" },
+      { label: "MID-10312", value: "MID-10312" },
+      { label: "MID-10399", value: "MID-10399" }
+    ],
+    owner: [
+      { label: "All Owners", value: "all" },
+      { label: "J. Alvarez", value: "J. Alvarez" },
+      { label: "T. Nguyen", value: "T. Nguyen" }
+    ],
+    territory: [
+      { label: "All Territories", value: "all" },
+      { label: "Northeast", value: "Northeast" },
+      { label: "Southeast", value: "Southeast" },
+      { label: "West", value: "West" }
+    ]
+  };
+
+  var IS_LIVE = typeof domo !== "undefined";
+
   var navBar = new DomoNavBar("#domo-nav-bar", {
     title: "Sales Performance",
-    filters: [
-      {
-        id: "brand",
-        label: "Brand",
-        placeholder: "All Brands",
+    filters: LIVE_FILTERS.map(function (f) {
+      return {
+        id: f.id,
+        label: f.id === "masterId" ? "Master ID" : f.id.charAt(0).toUpperCase() + f.id.slice(1),
+        placeholder: f.allLabel,
         defaultValue: "all",
-        options: [
-          { label: "All Brands", value: "all" },
-          { label: "Acme Co.", value: "acme" },
-          { label: "Northwind", value: "northwind" },
-          { label: "Globex", value: "globex" },
-          { label: "Initech", value: "initech" }
-        ]
-      },
-      {
-        id: "masterId",
-        label: "Master ID",
-        placeholder: "All IDs",
-        defaultValue: "all",
-        options: [
-          { label: "All IDs", value: "all" },
-          { label: "MID-10231", value: "10231" },
-          { label: "MID-10245", value: "10245" },
-          { label: "MID-10298", value: "10298" },
-          { label: "MID-10312", value: "10312" },
-          { label: "MID-10399", value: "10399" },
-          { label: "MID-10410", value: "10410" },
-          { label: "MID-10456", value: "10456" }
-        ]
-      },
-      {
-        id: "owner",
-        label: "Owner",
-        placeholder: "All Owners",
-        defaultValue: "all",
-        options: [
-          { label: "All Owners", value: "all" },
-          { label: "J. Alvarez", value: "jalvarez" },
-          { label: "T. Nguyen", value: "tnguyen" },
-          { label: "R. Patel", value: "rpatel" },
-          { label: "S. Kim", value: "skim" }
-        ]
-      },
-      {
-        id: "territory",
-        label: "Territory",
-        placeholder: "All Territories",
-        defaultValue: "all",
-        options: [
-          { label: "All Territories", value: "all" },
-          { label: "Northeast", value: "ne" },
-          { label: "Southeast", value: "se" },
-          { label: "Midwest", value: "mw" },
-          { label: "West", value: "west" },
-          { label: "International", value: "intl" }
-        ]
-      }
-    ],
+        // Start with just the "All ..." option; real values are filled in
+        // by loadLiveFilterOptions() below once domo.get() resolves.
+        options: IS_LIVE ? [{ label: f.allLabel, value: "all" }] : MOCK_OPTIONS[f.id]
+      };
+    }),
     periods: ["MTD", "QTD", "YTD", "Custom"],
     defaultPeriod: "MTD",
     trailingFilters: [
@@ -127,6 +128,39 @@
     ]
   });
 
+  // ---------------------------------------------------------
+  // 2. Pull distinct values for each dropdown straight from the
+  //    dataset, one groupby query per column, and push them into
+  //    the nav bar once they resolve.
+  // ---------------------------------------------------------
+  function loadLiveFilterOptions() {
+    LIVE_FILTERS.forEach(function (f) {
+      var query =
+        "/data/v1/" + DATASET_ALIAS +
+        "?fields=" + encodeURIComponent(f.column) +
+        "&groupby=" + encodeURIComponent(f.column) +
+        "&orderby=" + encodeURIComponent(f.column);
+
+      domo.get(query)
+        .then(function (rows) {
+          var options = [{ label: f.allLabel, value: "all" }].concat(
+            rows
+              .map(function (row) { return row[f.column]; })
+              .filter(function (v) { return v !== null && v !== undefined && v !== ""; })
+              .map(function (v) { return { label: String(v), value: String(v) }; })
+          );
+          navBar.setOptions(f.id, options);
+        })
+        .catch(function (err) {
+          console.error("Failed to load options for " + f.id + " from " + query, err);
+        });
+    });
+  }
+
+  if (IS_LIVE) {
+    loadLiveFilterOptions();
+  }
+
   var stateOutput = document.getElementById("state-output");
   function renderState() {
     stateOutput.textContent = JSON.stringify(navBar.getState(), null, 2);
@@ -136,8 +170,8 @@
   navBar.onChange(function (detail) {
     renderState();
     // ---------------------------------------------------------
-    // Hook point: forward the updated filter state into your
-    // Domo data calls here, e.g.:
+    // Hook point: forward the updated filter state into whatever
+    // queries drive your charts, e.g.:
     //
     // domo.get('/data/v1/salesDataset?' + buildQuery(detail.state))
     //   .then(function (rows) { renderCharts(rows); });

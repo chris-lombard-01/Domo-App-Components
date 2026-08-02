@@ -61,15 +61,33 @@ Open `index.html` in a browser (or `python3 -m http.server` from this folder). I
 
 ## Populating options from a live Domo dataset
 
-If Brand / Master ID / Owner / Territory values should come from a dataset rather than being hardcoded, fetch distinct values on load and call `setOptions`:
+`index.html` already does this end-to-end — Brand / Master ID / Owner / Territory are no longer hardcoded, they're pulled from a dataset at load time. To point it at your real data:
 
-```js
-domo.get('/data/v1/yourDatasetAlias?fields=brand&groupby=brand').then(function (rows) {
-  navBar.setOptions('brand', [
-    { label: 'All Brands', value: 'all' }
-  ].concat(rows.map(function (r) { return { label: r.brand, value: r.brand }; })));
-});
-```
+1. **Find your dataset's ID** — open the dataset in Domo's Data Center; the ID is the GUID in the page URL.
+2. **Add it to `manifest.json`**, under `mapping` (already scaffolded):
+   ```json
+   "mapping": [
+     { "alias": "filterData", "dataSetId": "<your-dataset-guid>", "fields": [] }
+   ]
+   ```
+   `filterData` is just a name your code uses to refer to this dataset — it doesn't need to match anything in Domo. This `dataSetId` is what `domo dev` proxies against locally; once the app is published and added to a page, Domo's card-setup screen ("Select Dataset") is what actually binds the alias to a real dataset, so point it at the same one there.
+3. **Match the column names**, in `index.html`:
+   ```js
+   var DATASET_ALIAS = "filterData"; // must match manifest.json's alias
+
+   var LIVE_FILTERS = [
+     { id: "brand",     column: "Brand",     allLabel: "All Brands" },
+     { id: "masterId",  column: "Master ID", allLabel: "All IDs" },
+     { id: "owner",     column: "Owner",     allLabel: "All Owners" },
+     { id: "territory", column: "Territory", allLabel: "All Territories" }
+   ];
+   ```
+   Change each `column` value to the exact (case-sensitive) column header in your dataset.
+4. That's it — `loadLiveFilterOptions()` runs one `domo.get('/data/v1/filterData?fields=...&groupby=...')` per filter, builds an `[{label, value}, ...]` list from the distinct values, and calls `navBar.setOptions(id, options)`.
+
+This only runs when a real Domo runtime is present (`typeof domo !== "undefined"` — true inside `domo dev` and once published). Opening `index.html` directly in a plain browser still works, falling back to the small `MOCK_OPTIONS` object at the top of the script, so you can keep designing without needing a live dataset connection.
+
+Add more dataset-driven filters the same way: add an entry to `LIVE_FILTERS` and a matching filter definition in the `filters` array passed to `new DomoNavBar(...)`.
 
 ## The manifest.json
 
@@ -81,7 +99,9 @@ Domo custom apps (Dev Studio / App Framework apps, published with the `ryuu`/`do
   "version": "1.0.0",
   "fullpage": true,
   "size": { "width": 12, "height": 2 },
-  "mapping": [],
+  "mapping": [
+    { "alias": "filterData", "dataSetId": "PUT-YOUR-DATASET-ID-HERE", "fields": [] }
+  ],
   "ignore": ["README.md", ".git", ".gitignore"]
 }
 ```
@@ -89,7 +109,7 @@ Domo custom apps (Dev Studio / App Framework apps, published with the `ryuu`/`do
 - **name / version** — required; how the app design shows up in Domo.
 - **fullpage** — lets the app stretch to fill its container's width, appropriate for a bar meant to span the top of a page rather than sit in a fixed-size card.
 - **size** — the default width/height (in grid units) used for local dev preview; resize the card after adding it to your page.
-- **mapping** — dataset aliases the app queries via `domo.get`. It's empty here because the filter options are currently mocked in `index.html`. If you wire the dropdowns to a live dataset (see "Populating options from a live Domo dataset" below), add an entry: `{ "alias": "yourAlias", "dataSetId": "<dataset-guid>", "fields": [] }`.
+- **mapping** — dataset aliases the app queries via `domo.get`. Replace `PUT-YOUR-DATASET-ID-HERE` with your real dataset's GUID — see "Populating options from a live Domo dataset" below for the full hookup.
 - **id** — intentionally omitted; the CLI injects it automatically into `manifest.json` the first time you publish. Don't hand-write one.
 
 ### Publishing this app to Domo
