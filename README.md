@@ -88,14 +88,13 @@ Domo custom apps (Dev Studio / App Framework apps, published with the `ryuu`/`do
 
 ### Publishing this app to Domo
 
-```bash
-npm install -g ryuu          # installs the `domo` CLI
-domo login                   # authenticate to your Domo instance
-domo dev                     # local dev server with live reload against this manifest.json
-domo publish                 # bundles this folder and publishes the app design to Domo
-```
+This app is a **Domo Brick** (App Studio's pro-code component builder) — code goes directly into App Studio's built-in editor, not through the `ryuu`/`domo` CLI. To update it: open the app in App Studio's ProCode editor and paste in the current contents of `index.html`, `styles.css`, `app.js`, and `manifest.json` (the CLI publish flow described in older Domo Apps docs doesn't apply to this workflow).
 
-After publishing, add/update the app as a card on your App Studio page, confirm the Select Dataset step still points at `BudgetBlindsData`, and size it to sit as the page header above your other content.
+A Brick's runtime exposes two globals automatically — no `<script>` tag needed for either:
+- `window.domo` — `domo.get(...)` / `domo.filterContainer(...)`.
+- `window.datasets` — an array of the input dataset alias(es) bound to this Brick, in the order they're defined under `manifest.json`'s `datasetsMapping`. Since there's exactly one entry here, `datasets[0]` **is** `"BudgetBlindsData"` at runtime — `app.js` uses `datasets[0]` rather than hardcoding the string, so it stays correct if the binding ever changes.
+
+After pasting updated code in, confirm the card's dataset binding still points at `BudgetBlindsData` and re-check the browser console for the diagnostics described above.
 
 ## Re-theming
 
