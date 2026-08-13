@@ -88,13 +88,18 @@ Domo custom apps (Dev Studio / App Framework apps, published with the `ryuu`/`do
 
 ### Publishing this app to Domo
 
-This app is a **Domo Brick** (App Studio's pro-code component builder) — code goes directly into App Studio's built-in editor, not through the `ryuu`/`domo` CLI. To update it: open the app in App Studio's ProCode editor and paste in the current contents of `index.html`, `styles.css`, `app.js`, and `manifest.json` (the CLI publish flow described in older Domo Apps docs doesn't apply to this workflow).
+This started as a **DDX Brick** but was migrated to a full **App Code** custom app (Domo will actively tell you to do this once a Brick tries to do page-wide things like `filterContainer` — Bricks are meant to be fixed, self-contained visualization components, not general nav/filter bars). The two runtimes differ in a way that matters for this code:
 
-A Brick's runtime exposes two globals automatically — no `<script>` tag needed for either:
-- `window.domo` — `domo.get(...)` / `domo.filterContainer(...)`.
-- `window.datasets` — an array of the input dataset alias(es) bound to this Brick, in the order they're defined under `manifest.json`'s `datasetsMapping`. Since there's exactly one entry here, `datasets[0]` **is** `"BudgetBlindsData"` at runtime — `app.js` uses `datasets[0]` rather than hardcoding the string, so it stays correct if the binding ever changes.
+| | DDX Brick | App Code |
+|---|---|---|
+| `domo.js` | Auto-injected as `window.domo`; an explicit `<script src="domo.js">` tag 404s | Loaded for real via `<script src="domo.js"></script>` in `index.html` |
+| `datasets` | Auto-injected as `window.datasets` (array, order matches manifest mapping) | **Not** auto-injected — declare it yourself: `var datasets = ['BudgetBlindsData'];` matching your manifest's alias |
 
-After pasting updated code in, confirm the card's dataset binding still points at `BudgetBlindsData` and re-check the browser console for the diagnostics described above.
+`index.html` and `app.js` in this repo are set up for **App Code** (the script tag is present; `app.js` self-declares `var datasets = ['BudgetBlindsData'];`). If you ever go back to a Brick, both of those need to flip the other way.
+
+Code still goes directly into Domo's built-in editor, not through the `ryuu`/`domo` CLI — paste in the current contents of `index.html`, `styles.css`, `app.js`, and `manifest.json` when updating.
+
+After pasting updated code in, confirm the card's dataset binding still points at `BudgetBlindsData` and re-check the browser console for the diagnostics described above. One thing worth double-checking on your end: the dataset-mapping key in `manifest.json` was `datasetsMapping` under the Brick — App Code's manifest schema may expect a different key (older Domo custom-app docs use `mapping`). If the App Code editor shows/regenerates a different manifest shape than what's in this repo, treat its version as the source of truth and let me know what it looks like so I can update this file to match.
 
 ## Re-theming
 

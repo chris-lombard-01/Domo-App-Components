@@ -1,12 +1,12 @@
 // ============================================
 // DATASET WIRING
-// This app is a Domo Brick (pro-code component), which exposes its
-// bound input dataset(s) as a runtime array: window.datasets. Since
-// manifest.json's datasetsMapping has exactly one entry
-// ("BudgetBlindsData"), datasets[0] IS that dataset's live alias —
-// use it instead of hardcoding the name, since it's the value Domo
-// actually bound at publish/card-setup time. Falls back to the
-// hardcoded alias when previewed outside a real Brick runtime.
+// This is a Domo App (migrated off DDX Bricks), where — unlike
+// Bricks — `datasets` isn't auto-injected by the platform at
+// runtime. You declare it yourself, matching the alias in
+// manifest.json's dataset mapping ("BudgetBlindsData").
+// domo.js itself IS provided automatically here via the <script
+// src="domo.js"> tag in index.html (the reverse of Bricks, where
+// that same tag 404s and window.domo is auto-injected instead).
 //
 // data-column in index.html holds the RAW column name (what
 // domo.filterContainer needs, since sibling cards on the page only
@@ -14,7 +14,8 @@
 // to this app's field alias (what domo.get needs to query its own
 // dataset mapping).
 // ============================================
-var DATASET_ALIAS = (typeof datasets !== 'undefined' && datasets && datasets[0]) ? datasets[0] : 'BudgetBlindsData';
+var datasets = ['BudgetBlindsData']; // must match the alias in manifest.json
+var DATASET_ALIAS = datasets[0];
 
 var COLUMN_TO_ALIAS = {
   'Brand': 'Brand',
