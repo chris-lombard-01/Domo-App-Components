@@ -1,10 +1,14 @@
 // ============================================
 // DATASET WIRING
-// This is a Domo App (migrated off DDX Bricks), where — unlike
-// Bricks — `datasets` isn't auto-injected by the platform at
-// runtime. You declare it yourself, matching the alias in
-// manifest.json's dataset mapping ("BudgetBlindsData").
-// domo.js itself IS provided automatically here via the <script
+// This is a Domo App Code app (migrated off DDX Bricks). Deliberately
+// NOT using a variable named `datasets` here — a top-level `var
+// datasets = [...]` becomes a global (window.datasets) in a browser
+// regardless of how it's declared, which is exactly the pattern
+// Domo's editor flags as "looks like it migrated from a Brick."
+// The alias below is confirmed directly against Resources > Datasets
+// > schema in the App Code editor (Dataset ID f708d305-..., alias
+// BudgetBlindsData, with live preview rows), so it's hardcoded here.
+// domo.js itself IS provided automatically via the <script
 // src="domo.js"> tag in index.html (the reverse of Bricks, where
 // that same tag 404s and window.domo is auto-injected instead).
 //
@@ -14,8 +18,7 @@
 // to this app's field alias (what domo.get needs to query its own
 // dataset mapping).
 // ============================================
-var datasets = ['BudgetBlindsData']; // must match the alias in manifest.json
-var DATASET_ALIAS = datasets[0];
+var DATASET_ALIAS = 'BudgetBlindsData'; // Resources > Datasets > schema > Alias
 
 var COLUMN_TO_ALIAS = {
   'Brand': 'Brand',

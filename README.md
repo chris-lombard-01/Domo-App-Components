@@ -93,9 +93,11 @@ This started as a **DDX Brick** but was migrated to a full **App Code** custom a
 | | DDX Brick | App Code |
 |---|---|---|
 | `domo.js` | Auto-injected as `window.domo`; an explicit `<script src="domo.js">` tag 404s | Loaded for real via `<script src="domo.js"></script>` in `index.html` |
-| `datasets` | Auto-injected as `window.datasets` (array, order matches manifest mapping) | **Not** auto-injected — declare it yourself: `var datasets = ['BudgetBlindsData'];` matching your manifest's alias |
+| dataset alias | Auto-injected as `window.datasets` (array, order matches manifest mapping) | Not auto-injected, and Domo's editor flags any top-level `var datasets = [...]` as "looks migrated from a Brick" (top-level `var` becomes `window.datasets` either way) — so `app.js` just hardcodes `var DATASET_ALIAS = 'BudgetBlindsData';` instead of naming a `datasets` variable at all |
 
-`index.html` and `app.js` in this repo are set up for **App Code** (the script tag is present; `app.js` self-declares `var datasets = ['BudgetBlindsData'];`). If you ever go back to a Brick, both of those need to flip the other way.
+`index.html` and `app.js` in this repo are set up for **App Code** (the script tag is present; the dataset alias is hardcoded rather than read off a `datasets` variable). If you ever go back to a Brick, the script tag needs to come back out and the alias would come from `window.datasets[0]` instead.
+
+The alias/column mapping is confirmed directly against **Resources → Datasets → schema** in the App Code editor: Dataset ID `f708d305-0238-4727-9fa1-80e7efa4d7d8`, alias `BudgetBlindsData`, columns `Brand→Brand`, `HFCMasterID→HFCMasterID`, `FranchiseName→Owner`, `TerrNum→TerrNumName` — matching `manifest.json` exactly, with live preview rows confirming the connection is real (not sample data).
 
 Code still goes directly into Domo's built-in editor, not through the `ryuu`/`domo` CLI — paste in the current contents of `index.html`, `styles.css`, `app.js`, and `manifest.json` when updating.
 
