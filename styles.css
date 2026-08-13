@@ -1,0 +1,234 @@
+/* ============================================
+   THEME TOKENS — change these to restyle everything
+   ============================================ */
+:root {
+  --bar-bg: #F2F3F4;          /* subtle gray background */
+  --bar-border: #E1E3E5;
+  --control-bg: #FFFFFF;
+  --control-border: #D8DBDD;
+  --text-main: #2E3436;
+  --text-label: #7A8286;      /* muted gray for small caps labels */
+  --accent: #5FBEA5;          /* seafoam green */
+  --accent-light: #E6F5F1;    /* pale seafoam for hover/active backgrounds */
+  --accent-text: #1F5C4E;     /* dark seafoam for text on light accent bg */
+  --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+/* ============================================
+   NAV BAR CONTAINER
+   ============================================ */
+.filter-bar {
+  background: var(--bar-bg);
+  border: 1px solid var(--bar-border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 20px;
+  max-width: 1100px;
+  width: 100%;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Small caps label above every control */
+.filter-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-label);
+  padding-left: 2px;
+}
+
+/* ============================================
+   DROPDOWN CONTROLS
+   ============================================ */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-main);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dropdown-btn:hover {
+  border-color: var(--accent);
+}
+
+.dropdown-btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.dropdown.open .dropdown-btn {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent-text);
+}
+
+.chevron {
+  width: 9px;
+  height: 9px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(45deg);
+  margin-top: -3px;
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.dropdown.open .chevron {
+  transform: rotate(-135deg);
+  margin-top: 3px;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 180px;
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  padding: 6px;
+  display: none;
+  z-index: 20;
+}
+
+.dropdown.open .dropdown-menu {
+  display: block;
+}
+
+.dropdown-item {
+  padding: 8px 10px;
+  font-size: 13.5px;
+  color: var(--text-main);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: var(--accent-light);
+  color: var(--accent-text);
+}
+
+.dropdown-item.selected {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ============================================
+   REPORTING PERIOD — segmented control
+   ============================================ */
+.segmented {
+  display: flex;
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  padding: 3px;
+  gap: 2px;
+}
+
+.segmented button {
+  border: none;
+  background: transparent;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-label);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.segmented button:hover {
+  color: var(--accent-text);
+}
+
+.segmented button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ============================================
+   CUSTOM DATE RANGE — shown only when "Custom" is active
+   ============================================ */
+.date-range {
+  display: none;               /* hidden by default, toggled via JS */
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.date-range.visible {
+  display: flex;
+}
+
+.date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.date-field input[type="date"] {
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  font-family: var(--font);
+  font-size: 13.5px;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.date-field input[type="date"]:hover {
+  border-color: var(--accent);
+}
+
+.date-field input[type="date"]:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+/* Divider between filter groups and reporting period */
+.divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--bar-border);
+  margin: 2px 0;
+}
+
+/* Spacer to push Compare to the right on wide screens */
+.spacer { flex: 1; min-width: 0; }
+
+@media (max-width: 720px) {
+  .filter-bar { justify-content: flex-start; }
+  .spacer { display: none; }
+}

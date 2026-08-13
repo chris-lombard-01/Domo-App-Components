@@ -3,242 +3,154 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Domo App Studio — Custom Nav Bar Preview</title>
-<link rel="stylesheet" href="css/nav-bar.css" />
+<title>Claude Nav</title>
+<link rel="stylesheet" href="styles.css" />
 <style>
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background: #fafbfb;
   }
   #app-body {
-    padding: 24px;
-    color: #33393a;
+    margin-top: 24px;
+    color: #2E3436;
   }
   #app-body h2 { font-size: 16px; margin: 0 0 8px; }
   #app-body p { font-size: 13px; color: #6b7271; }
-  pre#state-output {
-    background: #ffffff;
-    border: 1px solid #e0e4e3;
-    border-radius: 8px;
-    padding: 12px 16px;
-    font-size: 12px;
-    color: #33393a;
-    max-width: 480px;
-    overflow-x: auto;
-  }
 </style>
 </head>
 <body>
 
-  <!-- Mount point for the custom nav bar -->
-  <div id="domo-nav-bar"></div>
+<!-- ============================================
+     NAV BAR
+     ============================================ -->
+<div class="filter-bar" id="filterBar">
 
-  <div id="app-body">
-    <h2>App Studio content area</h2>
-    <p>This is a placeholder for your existing charts / vizzes. The nav bar above is fully self-contained — drop the markup, CSS, and JS into your App Studio app's index.html.</p>
-    <p><strong>Live filter state</strong> (updates on every change — this is what you'd forward into your <code>domo.get</code> calls):</p>
-    <pre id="state-output">{}</pre>
+  <!-- BRAND -->
+  <div class="filter-group">
+    <span class="filter-label">Brand</span>
+    <div class="dropdown" data-dropdown data-column="Brand">
+      <button class="dropdown-btn" data-toggle>
+        <span data-value>All Brands</span>
+        <span class="chevron"></span>
+      </button>
+      <div class="dropdown-menu">
+        <div class="dropdown-item selected" data-select>All Brands</div>
+        <div class="dropdown-item" data-select>Two Maids</div>
+        <div class="dropdown-item" data-select>Bark &amp; Mane</div>
+      </div>
+    </div>
   </div>
+
+  <!-- MASTER ID -->
+  <div class="filter-group">
+    <span class="filter-label">Master ID</span>
+    <div class="dropdown" data-dropdown data-column="HFCMasterID">
+      <button class="dropdown-btn" data-toggle>
+        <span data-value>All IDs</span>
+        <span class="chevron"></span>
+      </button>
+      <div class="dropdown-menu">
+        <div class="dropdown-item selected" data-select>All IDs</div>
+        <div class="dropdown-item" data-select>1001</div>
+        <div class="dropdown-item" data-select>1002</div>
+        <div class="dropdown-item" data-select>1003</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OWNER -->
+  <div class="filter-group">
+    <span class="filter-label">Owner</span>
+    <div class="dropdown" data-dropdown data-column="FranchiseName">
+      <button class="dropdown-btn" data-toggle>
+        <span data-value>All Owners</span>
+        <span class="chevron"></span>
+      </button>
+      <div class="dropdown-menu">
+        <div class="dropdown-item selected" data-select>All Owners</div>
+        <div class="dropdown-item" data-select>Owner A</div>
+        <div class="dropdown-item" data-select>Owner B</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TERRITORY -->
+  <div class="filter-group">
+    <span class="filter-label">Territory</span>
+    <div class="dropdown" data-dropdown data-column="TerrNum">
+      <button class="dropdown-btn" data-toggle>
+        <span data-value>All Territories</span>
+        <span class="chevron"></span>
+      </button>
+      <div class="dropdown-menu">
+        <div class="dropdown-item selected" data-select>All Territories</div>
+        <div class="dropdown-item" data-select>West</div>
+        <div class="dropdown-item" data-select>Midwest</div>
+        <div class="dropdown-item" data-select>Southeast</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- REPORTING PERIOD -->
+  <div class="filter-group">
+    <span class="filter-label">Reporting Period</span>
+    <div class="segmented" id="periodToggle">
+      <button class="active" data-period>MTD</button>
+      <button data-period>QTD</button>
+      <button data-period>YTD</button>
+      <button data-period="custom">Custom</button>
+    </div>
+  </div>
+
+  <!-- CUSTOM DATE RANGE — appears only when "Custom" is selected above -->
+  <div class="date-range" id="dateRange">
+    <div class="date-field">
+      <span class="filter-label">From</span>
+      <input type="date" id="fromDate">
+    </div>
+    <div class="date-field">
+      <span class="filter-label">To</span>
+      <input type="date" id="toDate">
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <!-- COMPARE -->
+  <div class="filter-group">
+    <span class="filter-label">Compare</span>
+    <div class="dropdown" data-dropdown>
+      <button class="dropdown-btn" data-toggle>
+        <span data-value>Prior Period</span>
+        <span class="chevron"></span>
+      </button>
+      <div class="dropdown-menu">
+        <div class="dropdown-item selected" data-select>Prior Period</div>
+        <div class="dropdown-item" data-select>Prior Year</div>
+        <div class="dropdown-item" data-select>No Comparison</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================
+     APP CONTENT — your existing charts/cards go here
+     ============================================ -->
+<div id="app-body">
+  <h2>App Studio content area</h2>
+  <p>Placeholder for your existing charts/vizzes. They don't need to live inside this app — as long as they're built on a dataset sharing these columns, domo.filterContainer() calls from the nav bar above will filter them too.</p>
+</div>
 
 <!-- Provided by the Domo runtime (both `domo dev` and a published app inject this).
      Safe to leave in even when opening this file in a plain browser — the script
-     simply won't exist there, and the code below falls back to mock data. -->
+     simply won't exist there, and app.js's domo.get/filterContainer calls are
+     skipped when `domo` is undefined. -->
 <script src="domo.js"></script>
-<script src="js/nav-bar.js"></script>
-<script>
-  // ---------------------------------------------------------
-  // 1. Dataset wiring — these match manifest.json's datasetsMapping:
-  //    DATASET_ALIAS is the dataset's "alias" ("BudgetBlindsData").
-  //    Each LIVE_FILTERS.column is a field ALIAS from that mapping's
-  //    "fields" array — used for domo.get() calls made BY THIS APP.
-  //    filterColumn is the real columnName — used when pushing a page
-  //    filter to OTHER cards via domo.filterContainer(), since those
-  //    cards only know the dataset's actual column names, not this
-  //    app's private field aliases.
-  // ---------------------------------------------------------
-  var DATASET_ALIAS = "BudgetBlindsData";
-
-  var LIVE_FILTERS = [
-    { id: "brand",     column: "Brand",       filterColumn: "Brand",         allLabel: "All Brands" },
-    { id: "masterId",  column: "HFCMasterID", filterColumn: "HFCMasterID",   allLabel: "All IDs" },
-    { id: "owner",     column: "Owner",       filterColumn: "FranchiseName", allLabel: "All Owners" },
-    { id: "territory", column: "TerrNumName", filterColumn: "TerrNum",       allLabel: "All Territories" }
-  ];
-
-  // Reporting Period (MTD/QTD/YTD/Custom) pushes a BETWEEN date filter
-  // on this column to the rest of the page.
-  var DATE_FILTER_COLUMN = "dt";
-
-  // Only used when this page is opened outside of Domo (no `domo` global),
-  // so the preview still looks/works right at design time.
-  var MOCK_OPTIONS = {
-    brand: [
-      { label: "All Brands", value: "all" },
-      { label: "Acme Co.", value: "Acme Co." },
-      { label: "Northwind", value: "Northwind" },
-      { label: "Globex", value: "Globex" },
-      { label: "Initech", value: "Initech" }
-    ],
-    masterId: [
-      { label: "All IDs", value: "all" },
-      { label: "MID-10231", value: "MID-10231" },
-      { label: "MID-10312", value: "MID-10312" },
-      { label: "MID-10399", value: "MID-10399" }
-    ],
-    owner: [
-      { label: "All Owners", value: "all" },
-      { label: "J. Alvarez", value: "J. Alvarez" },
-      { label: "T. Nguyen", value: "T. Nguyen" }
-    ],
-    territory: [
-      { label: "All Territories", value: "all" },
-      { label: "Northeast", value: "Northeast" },
-      { label: "Southeast", value: "Southeast" },
-      { label: "West", value: "West" }
-    ]
-  };
-
-  var IS_LIVE = typeof domo !== "undefined";
-
-  var navBar = new DomoNavBar("#domo-nav-bar", {
-    title: "Sales Performance",
-    filters: LIVE_FILTERS.map(function (f) {
-      return {
-        id: f.id,
-        label: f.id === "masterId" ? "Master ID" : f.id.charAt(0).toUpperCase() + f.id.slice(1),
-        placeholder: f.allLabel,
-        defaultValue: "all",
-        // Start with just the "All ..." option; real values are filled in
-        // by loadLiveFilterOptions() below once domo.get() resolves.
-        options: IS_LIVE ? [{ label: f.allLabel, value: "all" }] : MOCK_OPTIONS[f.id]
-      };
-    }),
-    periods: ["MTD", "QTD", "YTD", "Custom"],
-    defaultPeriod: "MTD",
-    trailingFilters: [
-      {
-        id: "compare",
-        label: "Compare",
-        placeholder: "No Comparison",
-        defaultValue: "none",
-        searchable: false,
-        options: [
-          { label: "No Comparison", value: "none" },
-          { label: "Prior Period", value: "prior_period" },
-          { label: "Prior Year", value: "prior_year" },
-          { label: "Budget", value: "budget" },
-          { label: "Forecast", value: "forecast" }
-        ]
-      }
-    ]
-  });
-
-  // ---------------------------------------------------------
-  // 2. Pull distinct values for each dropdown straight from the
-  //    dataset, one groupby query per column, and push them into
-  //    the nav bar once they resolve.
-  // ---------------------------------------------------------
-  function loadLiveFilterOptions() {
-    LIVE_FILTERS.forEach(function (f) {
-      var query =
-        "/data/v1/" + DATASET_ALIAS +
-        "?fields=" + encodeURIComponent(f.column) +
-        "&groupby=" + encodeURIComponent(f.column) +
-        "&orderby=" + encodeURIComponent(f.column);
-
-      domo.get(query)
-        .then(function (rows) {
-          var options = [{ label: f.allLabel, value: "all" }].concat(
-            rows
-              .map(function (row) { return row[f.column]; })
-              .filter(function (v) { return v !== null && v !== undefined && v !== ""; })
-              .map(function (v) { return { label: String(v), value: String(v) }; })
-          );
-          navBar.setOptions(f.id, options);
-        })
-        .catch(function (err) {
-          console.error("Failed to load options for " + f.id + " from " + query, err);
-        });
-    });
-  }
-
-  if (IS_LIVE) {
-    loadLiveFilterOptions();
-  }
-
-  var stateOutput = document.getElementById("state-output");
-  function renderState() {
-    stateOutput.textContent = JSON.stringify(navBar.getState(), null, 2);
-  }
-  renderState();
-
-  // ---------------------------------------------------------
-  // 3. Push the current selections to the REST OF THE PAGE.
-  //    domo.filterContainer() applies a page-level filter that Domo
-  //    runs against every other card on this App Studio page built
-  //    on a dataset containing the named column — those cards don't
-  //    need to be part of this app, they just need to share the
-  //    column being filtered on.
-  // ---------------------------------------------------------
-  function buildPageFilters(state) {
-    var filters = [];
-
-    LIVE_FILTERS.forEach(function (f) {
-      if (state[f.id] && state[f.id] !== "all") {
-        filters.push({
-          column: f.filterColumn,
-          operator: "EQUALS",
-          values: [state[f.id]],
-          dataType: "STRING"
-        });
-      }
-    });
-
-    if (DATE_FILTER_COLUMN) {
-      var range = getDateRangeForPeriod(state.reportingPeriod, state.customRange);
-      if (range) {
-        filters.push({
-          column: DATE_FILTER_COLUMN,
-          operator: "BETWEEN",
-          values: [range.start, range.end],
-          dataType: "DATE"
-        });
-      }
-    }
-
-    return filters;
-  }
-
-  function getDateRangeForPeriod(period, customRange) {
-    var now = new Date();
-    var start;
-    if (period === "MTD") {
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
-    } else if (period === "QTD") {
-      start = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-    } else if (period === "YTD") {
-      start = new Date(now.getFullYear(), 0, 1);
-    } else if (period === "Custom") {
-      if (!customRange.start || !customRange.end) return null;
-      return { start: customRange.start, end: customRange.end };
-    } else {
-      return null;
-    }
-    return { start: toISODate(start), end: toISODate(now) };
-  }
-
-  function toISODate(d) {
-    return d.toISOString().slice(0, 10);
-  }
-
-  navBar.onChange(function (detail) {
-    renderState();
-    if (IS_LIVE) {
-      domo.filterContainer(buildPageFilters(detail.state));
-    }
-    console.log("Filter changed:", detail);
-  });
-</script>
+<script src="app.js"></script>
 </body>
 </html>
