@@ -2,7 +2,7 @@
 
 A drop-in row of 4-6 KPI cards for a Domo custom app, each showing an **MTD value with vs-last-month delta** and a **YTD value with vs-last-year delta**, wired directly to the `BudgetBlindsData` dataset. Built to sit on the same page as the companion **Claude Nav** app (same seafoam theme, same App Code conventions).
 
-- 6 cards in a single row (Revenue, Leads, Jobs Booked, Close Rate, Avg Ticket, Marketing Spend by default), wrapping to 3 / 2 / 1 across as the page narrows
+- 6 cards in a single row — a full funnel: Leads → Proposals → Orders → Revenue, plus AOV and Close Rate — wrapping to 3 / 2 / 1 across as the page narrows
 - Each card gets its own accent color as a top bar + tinted icon chip, so a metric is identifiable before you've read the title
 - Big MTD number with a green/red delta pill vs. the same number of days last month
 - Smaller YTD line below a divider, with its own delta vs. the same Jan 1-to-date window last year
@@ -40,40 +40,46 @@ Each card in `index.html` is a `.kpi-card` with:
 - `--kpi-color` (inline style) tints that card's icon chip and top accent bar — independent of the metric it represents, so palette changes are a one-line edit per card
 - `data-mtd-value` / `data-mtd-delta` / `data-ytd-value` / `data-ytd-delta` are the four spans `app.js` overwrites once real numbers load
 
-`app.js`'s `KPI_DEFS` is the single source of truth for what each card aggregates, and each entry is one of two shapes:
+`app.js`'s `KPI_DEFS` is the single source of truth for what each card aggregates. Every entry can carry:
+
+- `filterRows(rows)` — replaces a Beast Mode's `CASE WHEN <conditions>` (e.g. `Type='Leads' AND Category<>'Spend'`), narrowing the window's rows down before aggregation
+- either `column` + `agg` (`'sum'`/`'avg'`, for a plain `SUM(...)`/`AVG(...)`) **or** `compute(rows, def)` (for anything a Beast Mode expresses as `COUNT(DISTINCT ...)` or a ratio between two different row subsets)
+- `distinctKey(row)` — replaces a Beast Mode's `CONCAT(...)` dedup key, paired with the `distinctCount(rows, keyFn)` helper for `COUNT(DISTINCT ...)`
+- `excludeToday: true` — replaces an unconditional `dt < CURRENT_DATE()`
+- `format` — `'currency'`, `'percent'`, or `'number'`; controls both the headline formatting and how deltas read (percent-format KPIs show a **point** difference, e.g. "2.2 pts", instead of a percent-of-a-percent)
+
+Example (Proposals, a `COUNT(DISTINCT ...)`):
 
 ```js
-var KPI_DEFS = [
-  // Simple column
-  { id: 'Revenue', column: 'Revenue', agg: 'sum', format: 'currency' },
-
-  // Beast-Mode-style formula
-  {
-    id: 'CloseRate',
-    columns: ['JobsBooked', 'Leads'],
-    format: 'percent',
-    compute: function (rows) {
-      var leads = sumCol(rows, 'Leads');
-      return leads === 0 ? null : (sumCol(rows, 'JobsBooked') / leads) * 100;
-    }
-  }
-];
+{
+  id: 'Proposals',
+  columns: ['Type', 'quote_Number', 'project_PrimaryQuote', 'Category', 'OrganizationID', 'OwnerNumber'],
+  format: 'number',
+  filterRows: function (rows) {
+    return rows.filter(function (r) {
+      return r.Type === 'Quotes' && r.quote_Number != null &&
+        Number(r.project_PrimaryQuote) === 1 && r.Category !== 'Spend';
+    });
+  },
+  distinctKey: function (row) {
+    return [row.OrganizationID, row.OwnerNumber, row.quote_Number].join('|');
+  },
+  compute: function (rows, def) { return distinctCount(rows, def.distinctKey); }
+}
 ```
 
-- **Simple column** — `column` + `agg` (`'sum'` for totals like Revenue/Leads, `'avg'` for a plain row average)
-- **Formula** (`compute`) — a function that receives the rows already filtered to one window (MTD, MTD-prior, YTD, or YTD-prior) and returns the number, the same shape as writing the expression in Domo's Beast Mode editor. Use the `sumCol(rows, column)` / `avgCol(rows, column)` helpers. List every column the formula reads under `columns` so `loadKpisFromDomo()` fetches them.
-- `format` — `'currency'`, `'percent'`, or `'number'`, controls both the headline formatting and how deltas read (percent-format KPIs show a **point** difference, e.g. "2.2 pts", instead of a percent-of-a-percent)
+A KPI that's a ratio between two *different* row subsets (AOV, Close Rate) skips its own `filterRows` and instead calls another KPI def's `filterRows`/`distinctKey` directly inside `compute` — see `AOV` and `CloseRate` in `app.js`, which reuse `REVENUE_DEF`/`ORDERS_DEF`/`LEADS_DEF` this way rather than duplicating each definition.
 
 ### Why formulas, not just columns — and why this can't call a saved Beast Mode directly
 
-Beast Modes are evaluated by Domo's Analyzer/query engine at the card level — they aren't part of the dataset's stored schema, so `domo.get('/data/v1/...')` (which reads raw stored columns only) has no way to invoke one, even a certified/shared Beast Mode on the same dataset. The `compute` shape above is how to get equivalent behavior: paste the Beast Mode's formula and re-express it in JS against the raw columns, once, here.
+Beast Modes are evaluated by Domo's Analyzer/query engine at the card level — they aren't part of the dataset's stored schema, so `domo.get('/data/v1/...')` (which reads raw stored columns only) has no way to invoke one, even a certified/shared Beast Mode on the same dataset. `filterRows`/`compute`/`distinctKey` above is how to get equivalent behavior: paste the Beast Mode's formula and re-express it in JS against the raw columns, once, here.
 
-This also matters for correctness, not just plumbing: a rate like Close Rate is usually `SUM(Jobs Booked) / SUM(Leads)`, **not** an average of a stored per-row percentage column — those two are different numbers whenever row volume varies, and ratio-of-sums is what most rate-style Beast Modes actually compute. `CloseRate` and `AvgTicket` in `KPI_DEFS` are written this way as the pattern to follow for your real formulas.
+This also matters for correctness, not just plumbing: a rate like Close Rate is `SUM`/`COUNT` of totals, **not** an average of a stored per-row percentage column — those two are different numbers whenever row volume varies, and ratio-of-totals is what every rate-style formula in this dataset actually computes (confirmed directly by the AOV formula: "Orders Sum / Orders Count", not an average of a stored AOV column).
 
-On load, `loadKpisFromDomo()` runs a single query:
+On load, `loadKpisFromDomo()` runs a single query for the union of every KPI's `columns`:
 
 ```
-/data/v1/BudgetBlindsData?fields=dt,Revenue,Leads,JobsBooked,CloseRate,AvgTicket,MarketingSpend&limit=100000
+/data/v1/BudgetBlindsData?fields=dt,Type,LineValue,Category,OrganizationID,LeadID,OwnerNumber,quote_Number,project_PrimaryQuote,order_Wo&limit=100000
 ```
 
 and computes all four date windows client-side per KPI:
@@ -93,22 +99,25 @@ This app intentionally does **not** react to the nav bar's period selector — M
 
 ## Real Beast Modes ported so far
 
-**Leads** — ported directly from:
+The row is now a full funnel — **Leads → Proposals → Orders → Revenue**, plus **AOV** and **Close Rate** as derived ratios — and every card is a real formula, not a placeholder:
 
-```sql
-COUNT(DISTINCT CASE WHEN `Type` = 'Leads' AND `Category` <> 'Spend'
-  AND `dt` < CURRENT_DATE()
-  THEN CONCAT(`OrganizationID`, `LeadID`, MONTH(`dt`), YEAR(`dt`))
-END)
-```
+| Card | Ported from |
+|---|---|
+| **Leads** | `COUNT(DISTINCT CASE WHEN Type='Leads' AND Category<>'Spend' AND dt<CURRENT_DATE() THEN CONCAT(OrganizationID, LeadID, MONTH(dt), YEAR(dt)) END)` |
+| **Proposals** | `COUNT(DISTINCT CASE WHEN Type='Quotes' AND quote_Number IS NOT NULL AND project_PrimaryQuote=1 AND Category<>'Spend' THEN CONCAT(OrganizationID, OwnerNumber, quote_Number) END)` |
+| **Orders** | "Order Count": `COUNT(DISTINCT CASE WHEN Reporting Period Flag=1 AND Type='Orders' AND order_Wo IS NOT NULL AND Category<>'Spend' THEN CONCAT(OrganizationID, OwnerNumber, order_Wo) END)` |
+| **Revenue** | `SUM(CASE WHEN Type='Revenue' THEN LineValue END)` |
+| **AOV** | "Orders Sum / Orders Count" — Revenue's formula above, divided by Orders' distinct count |
+| **Close Rate** | Not a provided Beast Mode — this app's own placeholder ratio, Orders / Leads, now built from the two real distinct-count formulas above instead of a fabricated column |
 
-This revealed `BudgetBlindsData` is transaction-level (a `Type`/`Category` column per row, not one numeric column per metric) — `filterRows` in `KPI_DEFS` replaces the `Type`/`Category` CASE conditions, `distinctKey` replaces `CONCAT(...)`, and `excludeToday: true` replaces the unconditional `dt < CURRENT_DATE()` (today is dropped from both the MTD and YTD windows). The Beast Mode's own `` `HFC Period` ``/`` `HFC From Date` ``/`` `HFC To Date` `` branching is **not** reproduced — those are Domo Variables set by native page filter controls, invisible to this app's `domo.get`, and this app's MTD/YTD windows are fixed rather than reading the page's period selector (see Drill-down above).
+This confirmed `BudgetBlindsData` is transaction-level (`Type`/`Category` per row, e.g. `Type` taking values like `Leads`/`Quotes`/`Orders`/`Revenue`), which is why every card uses `filterRows`/`distinctKey` instead of reading a dedicated numeric column.
 
-**Revenue / JobsBooked / CloseRate / AvgTicket / MarketingSpend** are still placeholders (simple column sums or the ratio formulas described above) — given the Leads formula's schema, JobsBooked and MarketingSpend most likely need their own `Type`/`Category`-filtered formulas rather than a dedicated numeric column. Paste those Beast Modes in and I'll port them the same way.
+Two things dropped in translation, both intentionally:
 
-## Placeholder columns — update before publishing
+- **`dt < CURRENT_DATE()`** (Leads) → `excludeToday: true`, dropping today from both the MTD and YTD windows for that card.
+- **`` `HFC Period` `` / `` `HFC From Date` `` / `` `HFC To Date` `` (Leads) and `` `Reporting Period Flag` `` (Orders)** → dropped entirely. Both are how the production Beast Modes get their date window from Domo Variables set by the page's native filter controls — invisible to this app's `domo.get`. This app's own fixed MTD-vs-last-month / YTD-vs-last-year `dt` windows do that job instead (see Drill-down above for why this app doesn't read the nav bar's period selector).
 
-`Revenue`, `Leads`, `JobsBooked`, `CloseRate`, `AvgTicket`, and `MarketingSpend` in `KPI_DEFS` (`app.js`) and in `manifest.json`'s `datasetsMapping[0].fields` are **placeholder column names**. Confirm the real column names against **Resources → Datasets → schema** in the App Code editor (same process the nav bar README documents) and update both files to match — otherwise every card renders `—` (no matching numeric column).
+If any of these numbers don't match their source Beast Mode once live, the `Reporting Period Flag` drop on Orders is the most likely place to check first — it may be filtering out rows this app's own date window doesn't.
 
 ## The manifest.json
 

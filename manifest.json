@@ -12,10 +12,6 @@
                "columnName": "dt"
             },
             {
-               "alias": "Revenue",
-               "columnName": "Revenue"
-            },
-            {
                "alias": "Type",
                "columnName": "Type"
             },
@@ -28,24 +24,28 @@
                "columnName": "OrganizationID"
             },
             {
+               "alias": "OwnerNumber",
+               "columnName": "OwnerNumber"
+            },
+            {
                "alias": "LeadID",
                "columnName": "LeadID"
             },
             {
-               "alias": "JobsBooked",
-               "columnName": "JobsBooked"
+               "alias": "LineValue",
+               "columnName": "LineValue"
             },
             {
-               "alias": "CloseRate",
-               "columnName": "CloseRate"
+               "alias": "quote_Number",
+               "columnName": "quote_Number"
             },
             {
-               "alias": "AvgTicket",
-               "columnName": "AvgTicket"
+               "alias": "project_PrimaryQuote",
+               "columnName": "project_PrimaryQuote"
             },
             {
-               "alias": "MarketingSpend",
-               "columnName": "MarketingSpend"
+               "alias": "order_Wo",
+               "columnName": "order_Wo"
             }
          ],
          "dql": null

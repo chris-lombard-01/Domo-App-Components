@@ -19,24 +19,6 @@
      ============================================ -->
 <div class="kpi-row" id="kpiRow">
 
-  <!-- REVENUE -->
-  <div class="kpi-card" data-kpi="Revenue" style="--kpi-color:#5FBEA5">
-    <div class="kpi-header">
-      <span class="kpi-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.2c0-1.2-1.2-2.2-2.8-2.2s-2.8 1-2.8 2.2 1.2 1.8 2.8 2.2c1.6.4 2.8 1 2.8 2.2s-1.2 2.2-2.8 2.2-2.8-1-2.8-2.2M12 5.5v13"/></svg>
-      </span>
-      <span class="kpi-title">Revenue</span>
-    </div>
-    <button class="kpi-value" data-mtd-value data-drill="mtd" type="button">$128,400</button>
-    <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>8.4% vs last month</div>
-    <div class="kpi-divider"></div>
-    <div class="kpi-ytd">
-      <span class="kpi-ytd-label">YTD</span>
-      <button class="kpi-ytd-value" data-ytd-value data-drill="ytd" type="button">$942,100</button>
-      <span class="kpi-ytd-delta up" data-ytd-delta><span class="arrow"></span>12.1% vs last yr</span>
-    </div>
-  </div>
-
   <!-- LEADS -->
   <div class="kpi-card" data-kpi="Leads" style="--kpi-color:#4C8FD1">
     <div class="kpi-header">
@@ -55,13 +37,31 @@
     </div>
   </div>
 
-  <!-- JOBS BOOKED -->
-  <div class="kpi-card" data-kpi="JobsBooked" style="--kpi-color:#8B7FD1">
+  <!-- PROPOSALS -->
+  <div class="kpi-card" data-kpi="Proposals" style="--kpi-color:#8B7FD1">
+    <div class="kpi-header">
+      <span class="kpi-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
+      </span>
+      <span class="kpi-title">Proposals</span>
+    </div>
+    <button class="kpi-value" data-mtd-value data-drill="mtd" type="button">198</button>
+    <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>5.4% vs last month</div>
+    <div class="kpi-divider"></div>
+    <div class="kpi-ytd">
+      <span class="kpi-ytd-label">YTD</span>
+      <button class="kpi-ytd-value" data-ytd-value data-drill="ytd" type="button">1,602</button>
+      <span class="kpi-ytd-delta up" data-ytd-delta><span class="arrow"></span>7.8% vs last yr</span>
+    </div>
+  </div>
+
+  <!-- ORDERS -->
+  <div class="kpi-card" data-kpi="Orders" style="--kpi-color:#E0A83E">
     <div class="kpi-header">
       <span class="kpi-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 15l2 2 4-4"/></svg>
       </span>
-      <span class="kpi-title">Jobs Booked</span>
+      <span class="kpi-title">Orders</span>
     </div>
     <button class="kpi-value" data-mtd-value data-drill="mtd" type="button">176</button>
     <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>5.9% vs last month</div>
@@ -73,8 +73,44 @@
     </div>
   </div>
 
+  <!-- REVENUE -->
+  <div class="kpi-card" data-kpi="Revenue" style="--kpi-color:#5FBEA5">
+    <div class="kpi-header">
+      <span class="kpi-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.2c0-1.2-1.2-2.2-2.8-2.2s-2.8 1-2.8 2.2 1.2 1.8 2.8 2.2c1.6.4 2.8 1 2.8 2.2s-1.2 2.2-2.8 2.2-2.8-1-2.8-2.2M12 5.5v13"/></svg>
+      </span>
+      <span class="kpi-title">Revenue</span>
+    </div>
+    <button class="kpi-value" data-mtd-value data-drill="mtd" type="button">$128,400</button>
+    <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>8.4% vs last month</div>
+    <div class="kpi-divider"></div>
+    <div class="kpi-ytd">
+      <span class="kpi-ytd-label">YTD</span>
+      <button class="kpi-ytd-value" data-ytd-value data-drill="ytd" type="button">$942,100</button>
+      <span class="kpi-ytd-delta up" data-ytd-delta><span class="arrow"></span>12.1% vs last yr</span>
+    </div>
+  </div>
+
+  <!-- AOV -->
+  <div class="kpi-card" data-kpi="AOV" style="--kpi-color:#3FA7A0">
+    <div class="kpi-header">
+      <span class="kpi-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.3 12.7 4.4a2 2 0 0 0-1.4-.6H5a1 1 0 0 0-1 1v6.3c0 .5.2 1 .6 1.4l7.9 7.9a2 2 0 0 0 2.8 0l5.3-5.3a2 2 0 0 0 0-2.8Z"/><circle cx="8" cy="8.5" r="1.2"/></svg>
+      </span>
+      <span class="kpi-title">AOV</span>
+    </div>
+    <button class="kpi-value" data-mtd-value data-drill="mtd" type="button">$729</button>
+    <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>1.8% vs last month</div>
+    <div class="kpi-divider"></div>
+    <div class="kpi-ytd">
+      <span class="kpi-ytd-label">YTD</span>
+      <button class="kpi-ytd-value" data-ytd-value data-drill="ytd" type="button">$681</button>
+      <span class="kpi-ytd-delta up" data-ytd-delta><span class="arrow"></span>4.3% vs last yr</span>
+    </div>
+  </div>
+
   <!-- CLOSE RATE -->
-  <div class="kpi-card" data-kpi="CloseRate" style="--kpi-color:#E0A83E">
+  <div class="kpi-card" data-kpi="CloseRate" style="--kpi-color:#E07856">
     <div class="kpi-header">
       <span class="kpi-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M19 5 5 19"/></svg>
@@ -88,42 +124,6 @@
       <span class="kpi-ytd-label">YTD</span>
       <button class="kpi-ytd-value" data-ytd-value data-drill="ytd" type="button">47.6%</button>
       <span class="kpi-ytd-delta down" data-ytd-delta><span class="arrow"></span>1.0 pt vs last yr</span>
-    </div>
-  </div>
-
-  <!-- AVG TICKET -->
-  <div class="kpi-card" data-kpi="AvgTicket" style="--kpi-color:#3FA7A0">
-    <div class="kpi-header">
-      <span class="kpi-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.3 12.7 4.4a2 2 0 0 0-1.4-.6H5a1 1 0 0 0-1 1v6.3c0 .5.2 1 .6 1.4l7.9 7.9a2 2 0 0 0 2.8 0l5.3-5.3a2 2 0 0 0 0-2.8Z"/><circle cx="8" cy="8.5" r="1.2"/></svg>
-      </span>
-      <span class="kpi-title">Avg Ticket</span>
-    </div>
-    <button class="kpi-value" data-mtd-value data-drill="mtd" type="button">$729</button>
-    <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>1.8% vs last month</div>
-    <div class="kpi-divider"></div>
-    <div class="kpi-ytd">
-      <span class="kpi-ytd-label">YTD</span>
-      <button class="kpi-ytd-value" data-ytd-value data-drill="ytd" type="button">$681</button>
-      <span class="kpi-ytd-delta up" data-ytd-delta><span class="arrow"></span>4.3% vs last yr</span>
-    </div>
-  </div>
-
-  <!-- MARKETING SPEND -->
-  <div class="kpi-card" data-kpi="MarketingSpend" style="--kpi-color:#E07856">
-    <div class="kpi-header">
-      <span class="kpi-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a4 4 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12"/></svg>
-      </span>
-      <span class="kpi-title">Marketing Spend</span>
-    </div>
-    <button class="kpi-value" data-mtd-value data-drill="mtd" type="button">$18,250</button>
-    <div class="kpi-delta down" data-mtd-delta><span class="arrow"></span>4.6% vs last month</div>
-    <div class="kpi-divider"></div>
-    <div class="kpi-ytd">
-      <span class="kpi-ytd-label">YTD</span>
-      <button class="kpi-ytd-value" data-ytd-value data-drill="ytd" type="button">$134,900</button>
-      <span class="kpi-ytd-delta down" data-ytd-delta><span class="arrow"></span>2.9% vs last yr</span>
     </div>
   </div>
 

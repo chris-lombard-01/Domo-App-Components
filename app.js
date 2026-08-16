@@ -32,29 +32,32 @@ var DATE_COLUMN = 'dt';
 // in sync (each needs a matching .kpi-card with data-mtd-value/
 // data-mtd-delta/data-ytd-value/data-ytd-delta spans).
 //
-// IMPORTANT: Revenue/Leads/JobsBooked/AvgTicket/MarketingSpend are
-// placeholder column names — swap them for the real columns in
-// BudgetBlindsData (or whatever dataset this app is bound to) and
-// update manifest.json's datasetsMapping fields to match. Then port
-// your actual Beast Mode formulas into `compute` functions below —
-// paste the Beast Mode expressions and I'll translate them 1:1.
+// All 6 below are now real Beast Modes, forming one funnel: Leads ->
+// Proposals -> Orders -> Revenue, plus AOV and Close Rate as derived
+// ratios of the funnel stages. None of them read `Reporting Period
+// Flag` / `HFC Period`-style Domo Variables — those are how the
+// production Beast Modes get their date window from the page's native
+// filter controls, which this app can't see (see README). This app's
+// own MTD-vs-last-month / YTD-vs-last-year `dt` windows (below) do
+// that job instead, so any such condition is dropped when porting.
 // ============================================
 var KPI_DEFS = [
-  { id: 'Revenue',        column: 'Revenue',        agg: 'sum', format: 'currency' },
+  // SUM(CASE WHEN Type='Revenue' THEN LineValue END)
+  {
+    id: 'Revenue',
+    columns: ['Type', 'LineValue'],
+    format: 'currency',
+    filterRows: function (rows) {
+      return rows.filter(function (r) { return r.Type === 'Revenue'; });
+    },
+    column: 'LineValue',
+    agg: 'sum'
+  },
 
-  // Ported directly from the real Leads Beast Mode:
-  //   COUNT(DISTINCT CASE WHEN Type='Leads' AND Category<>'Spend'
-  //     AND dt < CURRENT_DATE() THEN CONCAT(OrganizationID, LeadID,
-  //     MONTH(dt), YEAR(dt)) END)
-  // `filterRows` replaces the Type/Category CASE conditions,
-  // `distinctKey` replaces the CONCAT(...) dedup key, and
-  // `excludeToday: true` replaces the AND dt < CURRENT_DATE() clause
-  // (today is always dropped from both the MTD and YTD windows for
-  // this KPI, since the Beast Mode applies that filter unconditionally
-  // across every period branch). The Beast Mode's own MTD/PM/YTD/Custom
-  // branching isn't reproduced here — this app owns its own fixed
-  // MTD-vs-last-month / YTD-vs-last-year windows below rather than
-  // reading the page's period selector.
+  // COUNT(DISTINCT CASE WHEN Type='Leads' AND Category<>'Spend'
+  //   AND dt < CURRENT_DATE() THEN CONCAT(OrganizationID, LeadID,
+  //   MONTH(dt), YEAR(dt)) END)
+  // excludeToday replaces the unconditional dt < CURRENT_DATE().
   {
     id: 'Leads',
     columns: ['Type', 'Category', 'OrganizationID', 'LeadID'],
@@ -74,50 +77,97 @@ var KPI_DEFS = [
     }
   },
 
-  // PLACEHOLDER — the Leads Beast Mode shows this dataset is
-  // transaction-level (Type/Category per row), so JobsBooked likely
-  // needs a similar Type-filtered distinct/sum formula rather than a
-  // dedicated numeric column. Swap in the real Beast Mode once available.
-  { id: 'JobsBooked',     column: 'JobsBooked',      agg: 'sum', format: 'number'   },
-
+  // "Proposals": COUNT(DISTINCT CASE WHEN Type='Quotes' AND
+  //   quote_Number IS NOT NULL AND project_PrimaryQuote=1 AND
+  //   Category<>'Spend' THEN CONCAT(OrganizationID, OwnerNumber,
+  //   quote_Number) END)
   {
-    // Placeholder ratio: JobsBooked / (distinct Leads, same definition
-    // as the Leads card above) * 100. Update once JobsBooked is ported
-    // to its real formula. excludeToday matches Leads' own window so
-    // both sides of the ratio cover the same days.
+    id: 'Proposals',
+    columns: ['Type', 'quote_Number', 'project_PrimaryQuote', 'Category', 'OrganizationID', 'OwnerNumber'],
+    format: 'number',
+    filterRows: function (rows) {
+      return rows.filter(function (r) {
+        return r.Type === 'Quotes' &&
+          r.quote_Number !== null && r.quote_Number !== undefined &&
+          Number(r.project_PrimaryQuote) === 1 &&
+          r.Category !== 'Spend';
+      });
+    },
+    distinctKey: function (row) {
+      return [row.OrganizationID, row.OwnerNumber, row.quote_Number].join('|');
+    },
+    compute: function (rows, def) {
+      return distinctCount(rows, def.distinctKey);
+    }
+  },
+
+  // "Order Count": COUNT(DISTINCT CASE WHEN Type='Orders' AND
+  //   order_Wo IS NOT NULL AND Category<>'Spend' THEN
+  //   CONCAT(OrganizationID, OwnerNumber, order_Wo) END)
+  // The real Beast Mode also gates on `Reporting Period Flag = 1` —
+  // that's the production page's own date-window mechanism (see note
+  // above) and is dropped here in favor of this app's own MTD/YTD
+  // date filtering.
+  {
+    id: 'Orders',
+    columns: ['Type', 'order_Wo', 'Category', 'OrganizationID', 'OwnerNumber'],
+    format: 'number',
+    filterRows: function (rows) {
+      return rows.filter(function (r) {
+        return r.Type === 'Orders' &&
+          r.order_Wo !== null && r.order_Wo !== undefined &&
+          r.Category !== 'Spend';
+      });
+    },
+    distinctKey: function (row) {
+      return [row.OrganizationID, row.OwnerNumber, row.order_Wo].join('|');
+    },
+    compute: function (rows, def) {
+      return distinctCount(rows, def.distinctKey);
+    }
+  },
+
+  // AOV = Orders (Revenue) Sum / Orders Count — two different subsets
+  // of the same rows (Type='Revenue' rows summed, Type='Orders' rows
+  // counted distinct), so this reuses REVENUE_DEF/ORDERS_DEF's own
+  // filterRows rather than taking one of its own.
+  {
+    id: 'AOV',
+    columns: ['Type', 'LineValue', 'order_Wo', 'Category', 'OrganizationID', 'OwnerNumber'],
+    format: 'currency',
+    compute: function (rows) {
+      var orderCount = distinctCount(ORDERS_DEF.filterRows(rows), ORDERS_DEF.distinctKey);
+      if (orderCount === 0) return null;
+      var revenue = sumCol(REVENUE_DEF.filterRows(rows), 'LineValue');
+      return revenue / orderCount;
+    }
+  },
+
+  // Close Rate = Orders / Leads. Not one of the Beast Modes provided —
+  // still this app's own placeholder ratio, just built from the two
+  // real distinct-count formulas above instead of a fabricated
+  // 'JobsBooked' column. excludeToday matches Leads' own window so
+  // both sides of the ratio cover the same days.
+  {
     id: 'CloseRate',
-    columns: ['JobsBooked', 'Type', 'Category', 'OrganizationID', 'LeadID'],
+    columns: ['Type', 'Category', 'OrganizationID', 'LeadID', 'order_Wo', 'OwnerNumber'],
     format: 'percent',
     excludeToday: true,
     compute: function (rows) {
       var leads = distinctCount(LEADS_DEF.filterRows(rows), LEADS_DEF.distinctKey);
       if (leads === 0) return null;
-      return (sumCol(rows, 'JobsBooked') / leads) * 100;
+      var orders = distinctCount(ORDERS_DEF.filterRows(rows), ORDERS_DEF.distinctKey);
+      return (orders / leads) * 100;
     }
-  },
-  {
-    // Placeholder ratio: SUM(Revenue) / SUM(Jobs Booked), not
-    // AVG(AvgTicket) — a true average ticket is total revenue over
-    // total jobs, not an average of per-row averages.
-    id: 'AvgTicket',
-    columns: ['Revenue', 'JobsBooked'],
-    format: 'currency',
-    compute: function (rows) {
-      var jobs = sumCol(rows, 'JobsBooked');
-      if (jobs === 0) return null;
-      return sumCol(rows, 'Revenue') / jobs;
-    }
-  },
-
-  // PLACEHOLDER — likely Type='Spend'/Category='Spend' filtered, per
-  // the Leads formula's `Category <> 'Spend'` exclusion implying a
-  // 'Spend' category exists in this same column.
-  { id: 'MarketingSpend', column: 'MarketingSpend',  agg: 'sum', format: 'currency' }
+  }
 ];
 
-// Reused by CloseRate above so both KPIs count "a lead" the exact
-// same way instead of duplicating the filter/dedup logic.
+// Reused above so AOV/CloseRate count "a lead"/"an order"/"revenue"
+// the exact same way the Leads/Orders/Revenue cards do, instead of
+// duplicating each filter/dedup definition.
+var REVENUE_DEF = KPI_DEFS.filter(function (d) { return d.id === 'Revenue'; })[0];
 var LEADS_DEF = KPI_DEFS.filter(function (d) { return d.id === 'Leads'; })[0];
+var ORDERS_DEF = KPI_DEFS.filter(function (d) { return d.id === 'Orders'; })[0];
 
 // ============================================
 // FORMATTING HELPERS
