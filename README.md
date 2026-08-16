@@ -40,19 +40,35 @@ Each card in `index.html` is a `.kpi-card` with:
 - `--kpi-color` (inline style) tints that card's icon chip and top accent bar — independent of the metric it represents, so palette changes are a one-line edit per card
 - `data-mtd-value` / `data-mtd-delta` / `data-ytd-value` / `data-ytd-delta` are the four spans `app.js` overwrites once real numbers load
 
-`app.js`'s `KPI_DEFS` is the single source of truth for what each card aggregates:
+`app.js`'s `KPI_DEFS` is the single source of truth for what each card aggregates, and each entry is one of two shapes:
 
 ```js
 var KPI_DEFS = [
-  { id: 'Revenue',    column: 'Revenue',    agg: 'sum', format: 'currency' },
-  { id: 'CloseRate',  column: 'CloseRate',  agg: 'avg', format: 'percent'  },
-  // ...
+  // Simple column
+  { id: 'Revenue', column: 'Revenue', agg: 'sum', format: 'currency' },
+
+  // Beast-Mode-style formula
+  {
+    id: 'CloseRate',
+    columns: ['JobsBooked', 'Leads'],
+    format: 'percent',
+    compute: function (rows) {
+      var leads = sumCol(rows, 'Leads');
+      return leads === 0 ? null : (sumCol(rows, 'JobsBooked') / leads) * 100;
+    }
+  }
 ];
 ```
 
-- `column` — the raw dataset column this KPI aggregates (**placeholder names — see below**)
-- `agg` — `'sum'` for totals (Revenue, Leads), `'avg'` for rates/averages (Close Rate, Avg Ticket)
+- **Simple column** — `column` + `agg` (`'sum'` for totals like Revenue/Leads, `'avg'` for a plain row average)
+- **Formula** (`compute`) — a function that receives the rows already filtered to one window (MTD, MTD-prior, YTD, or YTD-prior) and returns the number, the same shape as writing the expression in Domo's Beast Mode editor. Use the `sumCol(rows, column)` / `avgCol(rows, column)` helpers. List every column the formula reads under `columns` so `loadKpisFromDomo()` fetches them.
 - `format` — `'currency'`, `'percent'`, or `'number'`, controls both the headline formatting and how deltas read (percent-format KPIs show a **point** difference, e.g. "2.2 pts", instead of a percent-of-a-percent)
+
+### Why formulas, not just columns — and why this can't call a saved Beast Mode directly
+
+Beast Modes are evaluated by Domo's Analyzer/query engine at the card level — they aren't part of the dataset's stored schema, so `domo.get('/data/v1/...')` (which reads raw stored columns only) has no way to invoke one, even a certified/shared Beast Mode on the same dataset. The `compute` shape above is how to get equivalent behavior: paste the Beast Mode's formula and re-express it in JS against the raw columns, once, here.
+
+This also matters for correctness, not just plumbing: a rate like Close Rate is usually `SUM(Jobs Booked) / SUM(Leads)`, **not** an average of a stored per-row percentage column — those two are different numbers whenever row volume varies, and ratio-of-sums is what most rate-style Beast Modes actually compute. `CloseRate` and `AvgTicket` in `KPI_DEFS` are written this way as the pattern to follow for your real formulas.
 
 On load, `loadKpisFromDomo()` runs a single query:
 

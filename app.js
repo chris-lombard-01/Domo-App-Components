@@ -11,26 +11,63 @@ var DATE_COLUMN = 'dt';
 
 // ============================================
 // KPI DEFINITIONS
-// One entry per tile. `column` is the raw dataset column this KPI
-// aggregates. `format` controls how numbers render. `agg` is 'sum'
-// (totals, e.g. Revenue, Leads) or 'avg' (rates/averages, e.g. Close
-// Rate, Avg Ticket). Add/remove entries here to change which KPIs
-// show — just keep index.html's data-kpi values in sync (each needs
-// a matching .kpi-card with data-mtd-value/data-mtd-delta/
-// data-ytd-value/data-ytd-delta spans).
+// Two shapes, mirroring how Domo Beast Modes work (they're not
+// reachable from this app's domo.get call directly — see README —
+// so the same math has to be re-expressed here):
 //
-// IMPORTANT: Revenue/Leads/JobsBooked/CloseRate/AvgTicket/
-// MarketingSpend are placeholder column names — swap them for the
-// real columns in BudgetBlindsData (or whatever dataset this app is
-// bound to) and update manifest.json's datasetsMapping fields to
-// match.
+// 1. Simple column: { column, agg } — 'sum' for totals (Revenue,
+//    Leads), 'avg' for a plain row-average.
+// 2. Beast-Mode-style formula: { compute } — a function that takes
+//    the already-date-filtered rows for one window (MTD, MTD-prior,
+//    YTD, or YTD-prior) and returns the number, same as you'd write
+//    the formula in Domo's Beast Mode editor. Use sumCol()/avgCol()
+//    as helpers. Prefer this whenever the real Beast Mode is a ratio
+//    (e.g. SUM(Jobs Booked) / SUM(Leads)) rather than a stored rate
+//    column — averaging a per-row percentage is usually NOT the same
+//    number as the ratio of totals, and ratio-of-sums is what most
+//    rate Beast Modes actually compute.
+//
+// `format` controls how numbers/deltas render. Add/remove entries
+// here to change which KPIs show — keep index.html's data-kpi values
+// in sync (each needs a matching .kpi-card with data-mtd-value/
+// data-mtd-delta/data-ytd-value/data-ytd-delta spans).
+//
+// IMPORTANT: Revenue/Leads/JobsBooked/AvgTicket/MarketingSpend are
+// placeholder column names — swap them for the real columns in
+// BudgetBlindsData (or whatever dataset this app is bound to) and
+// update manifest.json's datasetsMapping fields to match. Then port
+// your actual Beast Mode formulas into `compute` functions below —
+// paste the Beast Mode expressions and I'll translate them 1:1.
 // ============================================
 var KPI_DEFS = [
   { id: 'Revenue',        column: 'Revenue',        agg: 'sum', format: 'currency' },
   { id: 'Leads',          column: 'Leads',           agg: 'sum', format: 'number'   },
   { id: 'JobsBooked',     column: 'JobsBooked',      agg: 'sum', format: 'number'   },
-  { id: 'CloseRate',      column: 'CloseRate',       agg: 'avg', format: 'percent'  },
-  { id: 'AvgTicket',      column: 'AvgTicket',       agg: 'avg', format: 'currency' },
+  {
+    // Example Beast-Mode-style formula: SUM(Jobs Booked) / SUM(Leads) * 100,
+    // not an average of a stored per-row rate column.
+    id: 'CloseRate',
+    columns: ['JobsBooked', 'Leads'],
+    format: 'percent',
+    compute: function (rows) {
+      var leads = sumCol(rows, 'Leads');
+      if (leads === 0) return null;
+      return (sumCol(rows, 'JobsBooked') / leads) * 100;
+    }
+  },
+  {
+    // Example: SUM(Revenue) / SUM(Jobs Booked), not AVG(AvgTicket) —
+    // a true "average ticket" is total revenue over total jobs, not
+    // an average of per-row averages (which skews toward low-volume rows).
+    id: 'AvgTicket',
+    columns: ['Revenue', 'JobsBooked'],
+    format: 'currency',
+    compute: function (rows) {
+      var jobs = sumCol(rows, 'JobsBooked');
+      if (jobs === 0) return null;
+      return sumCol(rows, 'Revenue') / jobs;
+    }
+  },
   { id: 'MarketingSpend', column: 'MarketingSpend',  agg: 'sum', format: 'currency' }
 ];
 
@@ -117,6 +154,21 @@ function aggregate(rows, column, agg) {
   return agg === 'sum' ? sum : sum / values.length;
 }
 
+// Helpers for use inside a KPI's `compute` function — the Beast-Mode
+// equivalent of SUM(column) / AVG(column) over the rows you're handed.
+function sumCol(rows, column) {
+  return aggregate(rows, column, 'sum');
+}
+function avgCol(rows, column) {
+  return aggregate(rows, column, 'avg');
+}
+
+// Runs either shape of a KPI def against one window's rows.
+function evaluateKpi(def, rows) {
+  if (typeof def.compute === 'function') return def.compute(rows);
+  return aggregate(rows, def.column, def.agg);
+}
+
 // ============================================
 // RENDER
 // ============================================
@@ -129,10 +181,10 @@ function renderKpi(def, rows, ranges) {
   var ytdRows = rows.filter(function (r) { return inRange(r[DATE_COLUMN], ranges.ytd); });
   var ytdPriorRows = rows.filter(function (r) { return inRange(r[DATE_COLUMN], ranges.ytdPrior); });
 
-  var mtdValue = aggregate(mtdRows, def.column, def.agg);
-  var mtdPriorValue = aggregate(mtdPriorRows, def.column, def.agg);
-  var ytdValue = aggregate(ytdRows, def.column, def.agg);
-  var ytdPriorValue = aggregate(ytdPriorRows, def.column, def.agg);
+  var mtdValue = evaluateKpi(def, mtdRows);
+  var mtdPriorValue = evaluateKpi(def, mtdPriorRows);
+  var ytdValue = evaluateKpi(def, ytdRows);
+  var ytdPriorValue = evaluateKpi(def, ytdPriorRows);
 
   var mtdDelta = formatDelta(mtdValue, mtdPriorValue, def.format, 'vs last month');
   var ytdDelta = formatDelta(ytdValue, ytdPriorValue, def.format, 'vs last yr');
@@ -172,7 +224,13 @@ function renderAll(rows) {
 var LIMIT = 100000;
 
 function loadKpisFromDomo() {
-  var fields = [DATE_COLUMN].concat(KPI_DEFS.map(function (d) { return d.column; }));
+  var fieldSet = {};
+  fieldSet[DATE_COLUMN] = true;
+  KPI_DEFS.forEach(function (d) {
+    (d.columns || [d.column]).forEach(function (c) { if (c) fieldSet[c] = true; });
+  });
+  var fields = Object.keys(fieldSet);
+
   var query = '/data/v1/' + DATASET_ALIAS +
     '?fields=' + fields.map(encodeURIComponent).join(',') +
     '&limit=' + LIMIT;
