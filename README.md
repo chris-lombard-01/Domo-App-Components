@@ -22,6 +22,14 @@ app.js          Dropdown behavior, Reporting Period logic, and the domo.get/filt
 
 Open `index.html` in a browser (or `python3 -m http.server` from this folder). Outside of a real Domo runtime, `domo` is undefined, so `app.js` skips every `domo.get`/`domo.filterContainer` call and just leaves the static placeholder dropdown items in place (Two Maids, Owner A, etc.) — the bar is still fully interactive for design/layout work.
 
+## Why a selection used to "filter and reset" — and how it's fixed
+
+`domo.filterContainer()` changes the page's filtered view, and Domo reloads cards bound to that view — including this app's own instance, since it queries `BudgetBlindsData` too. That reload re-runs `app.js` from the top, which used to rebuild the segmented control/dropdowns from `index.html`'s static defaults (MTD active, "All ..." selected) and then unconditionally re-push MTD — wiping out whatever had just been selected a moment earlier.
+
+The fix is `localStorage`: every selection (period, custom From/To, each dropdown, Compare) is saved to `navState` under the key `claudeNav.state.v1` as it's made. On load/reload, `selectPeriod(navState.period, false)` and `restoreDropdownSelection(...)` read that back and re-push *that* filter instead of the static default — so a reload reproduces the same selection rather than resetting it.
+
+Because `localStorage` is shared across same-origin iframes, this also means placing the same app on multiple Studio pages keeps them in sync — pick YTD on one page and another page's copy of this app opens already on YTD and pushes the same filter to its own cards. That cross-page sync assumes each page's App Code instance is served from the same origin; if your Domo instance sandboxes each instance separately, the reset bug is still fixed, it just won't sync between pages — worth a quick side-by-side check once this is live.
+
 ## How the pieces fit together
 
 `data-column` on each dropdown in `index.html` holds the **raw dataset column name** — `Brand`, `HFCMasterID`, `FranchiseName`, `TerrNum`. That's what `domo.filterContainer()` needs, because it's pushing a filter to *other* cards on the page, which only know real column names.
