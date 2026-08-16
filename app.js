@@ -41,24 +41,64 @@ var DATE_COLUMN = 'dt';
 // ============================================
 var KPI_DEFS = [
   { id: 'Revenue',        column: 'Revenue',        agg: 'sum', format: 'currency' },
-  { id: 'Leads',          column: 'Leads',           agg: 'sum', format: 'number'   },
-  { id: 'JobsBooked',     column: 'JobsBooked',      agg: 'sum', format: 'number'   },
+
+  // Ported directly from the real Leads Beast Mode:
+  //   COUNT(DISTINCT CASE WHEN Type='Leads' AND Category<>'Spend'
+  //     AND dt < CURRENT_DATE() THEN CONCAT(OrganizationID, LeadID,
+  //     MONTH(dt), YEAR(dt)) END)
+  // `filterRows` replaces the Type/Category CASE conditions,
+  // `distinctKey` replaces the CONCAT(...) dedup key, and
+  // `excludeToday: true` replaces the AND dt < CURRENT_DATE() clause
+  // (today is always dropped from both the MTD and YTD windows for
+  // this KPI, since the Beast Mode applies that filter unconditionally
+  // across every period branch). The Beast Mode's own MTD/PM/YTD/Custom
+  // branching isn't reproduced here — this app owns its own fixed
+  // MTD-vs-last-month / YTD-vs-last-year windows below rather than
+  // reading the page's period selector.
   {
-    // Example Beast-Mode-style formula: SUM(Jobs Booked) / SUM(Leads) * 100,
-    // not an average of a stored per-row rate column.
+    id: 'Leads',
+    columns: ['Type', 'Category', 'OrganizationID', 'LeadID'],
+    format: 'number',
+    excludeToday: true,
+    filterRows: function (rows) {
+      return rows.filter(function (r) {
+        return r.Type === 'Leads' && r.Category !== 'Spend';
+      });
+    },
+    distinctKey: function (row) {
+      var d = new Date(row[DATE_COLUMN]);
+      return [row.OrganizationID, row.LeadID, d.getMonth() + 1, d.getFullYear()].join('|');
+    },
+    compute: function (rows, def) {
+      return distinctCount(rows, def.distinctKey);
+    }
+  },
+
+  // PLACEHOLDER — the Leads Beast Mode shows this dataset is
+  // transaction-level (Type/Category per row), so JobsBooked likely
+  // needs a similar Type-filtered distinct/sum formula rather than a
+  // dedicated numeric column. Swap in the real Beast Mode once available.
+  { id: 'JobsBooked',     column: 'JobsBooked',      agg: 'sum', format: 'number'   },
+
+  {
+    // Placeholder ratio: JobsBooked / (distinct Leads, same definition
+    // as the Leads card above) * 100. Update once JobsBooked is ported
+    // to its real formula. excludeToday matches Leads' own window so
+    // both sides of the ratio cover the same days.
     id: 'CloseRate',
-    columns: ['JobsBooked', 'Leads'],
+    columns: ['JobsBooked', 'Type', 'Category', 'OrganizationID', 'LeadID'],
     format: 'percent',
+    excludeToday: true,
     compute: function (rows) {
-      var leads = sumCol(rows, 'Leads');
+      var leads = distinctCount(LEADS_DEF.filterRows(rows), LEADS_DEF.distinctKey);
       if (leads === 0) return null;
       return (sumCol(rows, 'JobsBooked') / leads) * 100;
     }
   },
   {
-    // Example: SUM(Revenue) / SUM(Jobs Booked), not AVG(AvgTicket) —
-    // a true "average ticket" is total revenue over total jobs, not
-    // an average of per-row averages (which skews toward low-volume rows).
+    // Placeholder ratio: SUM(Revenue) / SUM(Jobs Booked), not
+    // AVG(AvgTicket) — a true average ticket is total revenue over
+    // total jobs, not an average of per-row averages.
     id: 'AvgTicket',
     columns: ['Revenue', 'JobsBooked'],
     format: 'currency',
@@ -68,8 +108,16 @@ var KPI_DEFS = [
       return sumCol(rows, 'Revenue') / jobs;
     }
   },
+
+  // PLACEHOLDER — likely Type='Spend'/Category='Spend' filtered, per
+  // the Leads formula's `Category <> 'Spend'` exclusion implying a
+  // 'Spend' category exists in this same column.
   { id: 'MarketingSpend', column: 'MarketingSpend',  agg: 'sum', format: 'currency' }
 ];
+
+// Reused by CloseRate above so both KPIs count "a lead" the exact
+// same way instead of duplicating the filter/dedup logic.
+var LEADS_DEF = KPI_DEFS.filter(function (d) { return d.id === 'Leads'; })[0];
 
 // ============================================
 // FORMATTING HELPERS
@@ -163,11 +211,44 @@ function avgCol(rows, column) {
   return aggregate(rows, column, 'avg');
 }
 
-// Runs either shape of a KPI def against one window's rows.
-function evaluateKpi(def, rows) {
-  if (typeof def.compute === 'function') return def.compute(rows);
-  return aggregate(rows, def.column, def.agg);
+// The Beast-Mode equivalent of COUNT(DISTINCT keyFn(row)).
+function distinctCount(rows, keyFn) {
+  var seen = {};
+  var count = 0;
+  rows.forEach(function (r) {
+    var k = keyFn(r);
+    if (!(k in seen)) { seen[k] = true; count++; }
+  });
+  return count;
 }
+
+// Clips a [start, end] range's end to yesterday when a KPI's Beast
+// Mode excludes "today" unconditionally (see the Leads def above).
+// Only ever tightens the range, never widens it.
+function clipEndForToday(range, excludeToday) {
+  if (!excludeToday) return range;
+  var yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  var yStr = toISODate(yesterday);
+  return [range[0], range[1] < yStr ? range[1] : yStr];
+}
+
+// Applies a KPI's row-level filter (e.g. Leads' Type/Category match)
+// ahead of aggregation. Returns the detail rows that actually feed
+// the number — the same set the drill-down modal displays.
+function detailRowsFor(def, dateWindowRows) {
+  return def.filterRows ? def.filterRows(dateWindowRows) : dateWindowRows;
+}
+
+// Runs either shape of a KPI def against its (already filtered) detail rows.
+function evaluateKpi(def, detailRows) {
+  if (typeof def.compute === 'function') return def.compute(detailRows, def);
+  return aggregate(detailRows, def.column, def.agg);
+}
+
+// Populated by renderKpi so the drill-down modal can show exactly
+// the rows behind whichever number was clicked, with no re-fetch.
+var kpiRowCache = {};
 
 // ============================================
 // RENDER
@@ -176,10 +257,20 @@ function renderKpi(def, rows, ranges) {
   var card = document.querySelector('.kpi-card[data-kpi="' + def.id + '"]');
   if (!card) return;
 
-  var mtdRows = rows.filter(function (r) { return inRange(r[DATE_COLUMN], ranges.mtd); });
-  var mtdPriorRows = rows.filter(function (r) { return inRange(r[DATE_COLUMN], ranges.mtdPrior); });
-  var ytdRows = rows.filter(function (r) { return inRange(r[DATE_COLUMN], ranges.ytd); });
-  var ytdPriorRows = rows.filter(function (r) { return inRange(r[DATE_COLUMN], ranges.ytdPrior); });
+  var mtdRange = clipEndForToday(ranges.mtd, def.excludeToday);
+  var ytdRange = clipEndForToday(ranges.ytd, def.excludeToday);
+
+  var mtdRows = detailRowsFor(def, rows.filter(function (r) { return inRange(r[DATE_COLUMN], mtdRange); }));
+  var mtdPriorRows = detailRowsFor(def, rows.filter(function (r) { return inRange(r[DATE_COLUMN], ranges.mtdPrior); }));
+  var ytdRows = detailRowsFor(def, rows.filter(function (r) { return inRange(r[DATE_COLUMN], ytdRange); }));
+  var ytdPriorRows = detailRowsFor(def, rows.filter(function (r) { return inRange(r[DATE_COLUMN], ranges.ytdPrior); }));
+
+  // Cache the exact detail rows behind each number for the drill-down
+  // modal — same rows evaluateKpi() aggregates, just not aggregated.
+  kpiRowCache[def.id] = {
+    mtd: { rows: mtdRows, range: mtdRange, label: 'MTD' },
+    ytd: { rows: ytdRows, range: ytdRange, label: 'YTD' }
+  };
 
   var mtdValue = evaluateKpi(def, mtdRows);
   var mtdPriorValue = evaluateKpi(def, mtdPriorRows);
@@ -212,6 +303,85 @@ function renderAll(rows) {
     renderKpi(def, rows, ranges);
   });
 }
+
+// ============================================
+// DRILL-DOWN
+// Clicking a card's MTD or YTD number opens an in-app panel listing
+// the exact detail rows behind that number (from kpiRowCache — no
+// extra domo.get needed). "Filter the rest of the page" pushes the
+// same window as a domo.filterContainer BETWEEN so other native
+// Domo cards on the page can drill the same way.
+// ============================================
+var modalEl = document.getElementById('drilldownModal');
+
+function kpiTitleFor(id) {
+  var titleEl = document.querySelector('.kpi-card[data-kpi="' + id + '"] .kpi-title');
+  return titleEl ? titleEl.textContent : id;
+}
+
+function openDrilldown(kpiId, windowKey) {
+  var def = KPI_DEFS.filter(function (d) { return d.id === kpiId; })[0];
+  var cached = kpiRowCache[kpiId] && kpiRowCache[kpiId][windowKey];
+  if (!def || !cached || !modalEl) return;
+
+  var columns = [DATE_COLUMN].concat(def.columns || [def.column]).filter(Boolean);
+  var rows = cached.rows;
+  var ROW_CAP = 200;
+
+  modalEl.querySelector('[data-modal-title]').textContent = kpiTitleFor(kpiId) + ' — ' + cached.label;
+  modalEl.querySelector('[data-modal-subtitle]').textContent =
+    cached.range[0] + ' to ' + cached.range[1] + ' · ' + rows.length.toLocaleString('en-US') + ' row' + (rows.length === 1 ? '' : 's');
+
+  var thead = '<tr>' + columns.map(function (c) { return '<th>' + c + '</th>'; }).join('') + '</tr>';
+  var tbody = rows.slice(0, ROW_CAP).map(function (row) {
+    return '<tr>' + columns.map(function (c) {
+      var v = row[c];
+      return '<td>' + (v === null || v === undefined ? '—' : String(v)) + '</td>';
+    }).join('') + '</tr>';
+  }).join('');
+
+  modalEl.querySelector('[data-modal-thead]').innerHTML = thead;
+  modalEl.querySelector('[data-modal-tbody]').innerHTML = tbody || '<tr><td colspan="' + columns.length + '">No rows in this window.</td></tr>';
+
+  var capNote = modalEl.querySelector('[data-modal-cap]');
+  capNote.textContent = rows.length > ROW_CAP ? 'Showing first ' + ROW_CAP + ' of ' + rows.length.toLocaleString('en-US') + ' rows.' : '';
+
+  var filterBtn = modalEl.querySelector('[data-modal-filter]');
+  filterBtn.onclick = function () {
+    if (typeof domo === 'undefined') return;
+    var filters = [{ column: DATE_COLUMN, operator: 'BETWEEN', values: cached.range, dataType: 'DATE' }];
+    if (typeof def.drillFilters === 'function') filters = filters.concat(def.drillFilters());
+    domo.filterContainer(filters);
+    closeDrilldown();
+  };
+  // Only useful inside a real Domo runtime with other cards on the page.
+  filterBtn.style.display = typeof domo === 'undefined' ? 'none' : '';
+
+  modalEl.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDrilldown() {
+  if (!modalEl) return;
+  modalEl.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('click', function (e) {
+  var trigger = e.target.closest('[data-drill]');
+  if (trigger) {
+    var card = trigger.closest('.kpi-card');
+    if (card) openDrilldown(card.getAttribute('data-kpi'), trigger.getAttribute('data-drill'));
+    return;
+  }
+  if (e.target.closest('[data-modal-close]') || e.target === modalEl) {
+    closeDrilldown();
+  }
+});
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeDrilldown();
+});
 
 // ============================================
 // FETCH + LOAD

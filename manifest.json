@@ -16,8 +16,20 @@
                "columnName": "Revenue"
             },
             {
-               "alias": "Leads",
-               "columnName": "Leads"
+               "alias": "Type",
+               "columnName": "Type"
+            },
+            {
+               "alias": "Category",
+               "columnName": "Category"
+            },
+            {
+               "alias": "OrganizationID",
+               "columnName": "OrganizationID"
+            },
+            {
+               "alias": "LeadID",
+               "columnName": "LeadID"
             },
             {
                "alias": "JobsBooked",

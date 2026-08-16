@@ -85,6 +85,27 @@ and computes all four date windows client-side per KPI:
 | YTD | Jan 1 this year → today |
 | YTD prior | Jan 1 last year → same month/day last year |
 
+## Drill-down
+
+Every MTD and YTD number is a button. Clicking one opens an in-app panel listing the exact detail rows behind that number — no extra `domo.get`, since `renderKpi()` caches each window's filtered rows in `kpiRowCache` as it computes the headline. The panel also has a **Filter page to this view** button that pushes the same date range (plus any KPI-specific filters, via an optional `drillFilters()` on the KPI def) through `domo.filterContainer()`, so other native Domo cards on the same Studio page drill to the same slice too. That button is hidden automatically outside a real Domo runtime.
+
+This app intentionally does **not** react to the nav bar's period selector — MTD-vs-last-month and YTD-vs-last-year are fixed, matching how the Beast Modes below are written. If that changes, the fix is a `domo.onFilterUpdate` listener (App Framework's cross-card filter hook, already stubbed in `app.js`) reading the nav bar's pushed `dt` range instead of computing one internally.
+
+## Real Beast Modes ported so far
+
+**Leads** — ported directly from:
+
+```sql
+COUNT(DISTINCT CASE WHEN `Type` = 'Leads' AND `Category` <> 'Spend'
+  AND `dt` < CURRENT_DATE()
+  THEN CONCAT(`OrganizationID`, `LeadID`, MONTH(`dt`), YEAR(`dt`))
+END)
+```
+
+This revealed `BudgetBlindsData` is transaction-level (a `Type`/`Category` column per row, not one numeric column per metric) — `filterRows` in `KPI_DEFS` replaces the `Type`/`Category` CASE conditions, `distinctKey` replaces `CONCAT(...)`, and `excludeToday: true` replaces the unconditional `dt < CURRENT_DATE()` (today is dropped from both the MTD and YTD windows). The Beast Mode's own `` `HFC Period` ``/`` `HFC From Date` ``/`` `HFC To Date` `` branching is **not** reproduced — those are Domo Variables set by native page filter controls, invisible to this app's `domo.get`, and this app's MTD/YTD windows are fixed rather than reading the page's period selector (see Drill-down above).
+
+**Revenue / JobsBooked / CloseRate / AvgTicket / MarketingSpend** are still placeholders (simple column sums or the ratio formulas described above) — given the Leads formula's schema, JobsBooked and MarketingSpend most likely need their own `Type`/`Category`-filtered formulas rather than a dedicated numeric column. Paste those Beast Modes in and I'll port them the same way.
+
 ## Placeholder columns — update before publishing
 
 `Revenue`, `Leads`, `JobsBooked`, `CloseRate`, `AvgTicket`, and `MarketingSpend` in `KPI_DEFS` (`app.js`) and in `manifest.json`'s `datasetsMapping[0].fields` are **placeholder column names**. Confirm the real column names against **Resources → Datasets → schema** in the App Code editor (same process the nav bar README documents) and update both files to match — otherwise every card renders `—` (no matching numeric column).

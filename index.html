@@ -27,12 +27,12 @@
       </span>
       <span class="kpi-title">Revenue</span>
     </div>
-    <div class="kpi-value" data-mtd-value>$128,400</div>
+    <button class="kpi-value" data-mtd-value data-drill="mtd" type="button">$128,400</button>
     <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>8.4% vs last month</div>
     <div class="kpi-divider"></div>
     <div class="kpi-ytd">
       <span class="kpi-ytd-label">YTD</span>
-      <span class="kpi-ytd-value" data-ytd-value>$942,100</span>
+      <button class="kpi-ytd-value" data-ytd-value data-drill="ytd" type="button">$942,100</button>
       <span class="kpi-ytd-delta up" data-ytd-delta><span class="arrow"></span>12.1% vs last yr</span>
     </div>
   </div>
@@ -45,12 +45,12 @@
       </span>
       <span class="kpi-title">Leads</span>
     </div>
-    <div class="kpi-value" data-mtd-value>342</div>
+    <button class="kpi-value" data-mtd-value data-drill="mtd" type="button">342</button>
     <div class="kpi-delta down" data-mtd-delta><span class="arrow"></span>3.1% vs last month</div>
     <div class="kpi-divider"></div>
     <div class="kpi-ytd">
       <span class="kpi-ytd-label">YTD</span>
-      <span class="kpi-ytd-value" data-ytd-value>2,910</span>
+      <button class="kpi-ytd-value" data-ytd-value data-drill="ytd" type="button">2,910</button>
       <span class="kpi-ytd-delta up" data-ytd-delta><span class="arrow"></span>6.7% vs last yr</span>
     </div>
   </div>
@@ -63,12 +63,12 @@
       </span>
       <span class="kpi-title">Jobs Booked</span>
     </div>
-    <div class="kpi-value" data-mtd-value>176</div>
+    <button class="kpi-value" data-mtd-value data-drill="mtd" type="button">176</button>
     <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>5.9% vs last month</div>
     <div class="kpi-divider"></div>
     <div class="kpi-ytd">
       <span class="kpi-ytd-label">YTD</span>
-      <span class="kpi-ytd-value" data-ytd-value>1,384</span>
+      <button class="kpi-ytd-value" data-ytd-value data-drill="ytd" type="button">1,384</button>
       <span class="kpi-ytd-delta up" data-ytd-delta><span class="arrow"></span>9.4% vs last yr</span>
     </div>
   </div>
@@ -81,12 +81,12 @@
       </span>
       <span class="kpi-title">Close Rate</span>
     </div>
-    <div class="kpi-value" data-mtd-value>51.5%</div>
+    <button class="kpi-value" data-mtd-value data-drill="mtd" type="button">51.5%</button>
     <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>2.2 pts vs last month</div>
     <div class="kpi-divider"></div>
     <div class="kpi-ytd">
       <span class="kpi-ytd-label">YTD</span>
-      <span class="kpi-ytd-value" data-ytd-value>47.6%</span>
+      <button class="kpi-ytd-value" data-ytd-value data-drill="ytd" type="button">47.6%</button>
       <span class="kpi-ytd-delta down" data-ytd-delta><span class="arrow"></span>1.0 pt vs last yr</span>
     </div>
   </div>
@@ -99,12 +99,12 @@
       </span>
       <span class="kpi-title">Avg Ticket</span>
     </div>
-    <div class="kpi-value" data-mtd-value>$729</div>
+    <button class="kpi-value" data-mtd-value data-drill="mtd" type="button">$729</button>
     <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>1.8% vs last month</div>
     <div class="kpi-divider"></div>
     <div class="kpi-ytd">
       <span class="kpi-ytd-label">YTD</span>
-      <span class="kpi-ytd-value" data-ytd-value>$681</span>
+      <button class="kpi-ytd-value" data-ytd-value data-drill="ytd" type="button">$681</button>
       <span class="kpi-ytd-delta up" data-ytd-delta><span class="arrow"></span>4.3% vs last yr</span>
     </div>
   </div>
@@ -117,16 +117,46 @@
       </span>
       <span class="kpi-title">Marketing Spend</span>
     </div>
-    <div class="kpi-value" data-mtd-value>$18,250</div>
+    <button class="kpi-value" data-mtd-value data-drill="mtd" type="button">$18,250</button>
     <div class="kpi-delta down" data-mtd-delta><span class="arrow"></span>4.6% vs last month</div>
     <div class="kpi-divider"></div>
     <div class="kpi-ytd">
       <span class="kpi-ytd-label">YTD</span>
-      <span class="kpi-ytd-value" data-ytd-value>$134,900</span>
+      <button class="kpi-ytd-value" data-ytd-value data-drill="ytd" type="button">$134,900</button>
       <span class="kpi-ytd-delta down" data-ytd-delta><span class="arrow"></span>2.9% vs last yr</span>
     </div>
   </div>
 
+</div>
+
+<!-- ============================================
+     DRILL-DOWN MODAL
+     Hidden by default (.open toggled by app.js). Filled in entirely
+     by openDrilldown() in app.js from kpiRowCache — no extra domo.get
+     call, since the row data is already in memory from the initial
+     load. "Filter the rest of the page" pushes the same window via
+     domo.filterContainer so other native Domo cards drill the same way.
+     ============================================ -->
+<div class="drilldown-overlay" id="drilldownModal">
+  <div class="drilldown-panel" role="dialog" aria-modal="true" aria-labelledby="drilldownTitle">
+    <div class="drilldown-head">
+      <div>
+        <h3 id="drilldownTitle" data-modal-title>KPI detail</h3>
+        <p data-modal-subtitle></p>
+      </div>
+      <div class="drilldown-actions">
+        <button class="drilldown-filter-btn" data-modal-filter type="button">Filter page to this view</button>
+        <button class="drilldown-close" data-modal-close type="button" aria-label="Close">&times;</button>
+      </div>
+    </div>
+    <div class="drilldown-table-wrap">
+      <table class="drilldown-table">
+        <thead data-modal-thead></thead>
+        <tbody data-modal-tbody></tbody>
+      </table>
+    </div>
+    <p class="drilldown-cap" data-modal-cap></p>
+  </div>
 </div>
 
 <!-- domo.js: provided for real under App Code once this is pasted into
