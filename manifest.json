@@ -12,6 +12,22 @@
                "columnName": "dt"
             },
             {
+               "alias": "Brand",
+               "columnName": "Brand"
+            },
+            {
+               "alias": "HFCMasterID",
+               "columnName": "HFCMasterID"
+            },
+            {
+               "alias": "FranchiseName",
+               "columnName": "FranchiseName"
+            },
+            {
+               "alias": "TerrNum",
+               "columnName": "TerrNum"
+            },
+            {
                "alias": "Type",
                "columnName": "Type"
             },

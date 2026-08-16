@@ -9,6 +9,16 @@
 var DATASET_ALIAS = 'BudgetBlindsData';
 var DATE_COLUMN = 'dt';
 
+// Raw dimension columns the companion nav bar app filters on (its
+// data-column values exactly — see that app's index.html/app.js).
+// Fetched alongside every KPI's own columns so Brand/Master ID/Owner/
+// Territory selections can be applied client-side (see
+// DIMENSION FILTERING below) — this app's own domo.get query is never
+// filtered by Domo automatically just because another card on the
+// page called domo.filterContainer(), so this app has to apply that
+// filter itself.
+var DIMENSION_COLUMNS = ['Brand', 'HFCMasterID', 'FranchiseName', 'TerrNum'];
+
 // ============================================
 // KPI DEFINITIONS
 // Two shapes, mirroring how Domo Beast Modes work (they're not
@@ -348,9 +358,10 @@ function renderKpi(def, rows, ranges) {
 }
 
 function renderAll(rows) {
+  var scoped = applyDimensionFilters(rows);
   var ranges = getDateRanges();
   KPI_DEFS.forEach(function (def) {
-    renderKpi(def, rows, ranges);
+    renderKpi(def, scoped, ranges);
   });
 }
 
@@ -434,18 +445,53 @@ document.addEventListener('keydown', function (e) {
 });
 
 // ============================================
+// DIMENSION FILTERING
+// Brand/Master ID/Owner/Territory selections in the nav bar arrive
+// here as domo.filterContainer() payloads via domo.onFilterUpdate
+// (below) — NOT as an automatically-filtered domo.get() result.
+// Nothing about calling domo.get() again re-scopes it to another
+// card's active filters; the filter has to be applied by this app,
+// explicitly, against the raw rows it already has in memory. That's
+// what this does — the same client-side approach the MTD/YTD date
+// windows already use, just for Brand/Owner/etc. instead of dt.
+//
+// activeDimensionFilters holds whatever the nav bar's most recent
+// domo.filterContainer() call looks like, e.g.
+//   [{ column: 'Brand', operator: 'IN', values: ['Two Maids'], dataType: 'STRING' }]
+// An empty `values` array means "All ..." was selected for that
+// column, i.e. no restriction. The nav bar's Reporting Period BETWEEN
+// filter on `dt` is deliberately ignored here — see the Drill-down
+// section of the README for why this app keeps its own fixed MTD/YTD
+// windows instead of following the page's period selector.
+// ============================================
+var activeDimensionFilters = [];
+
+function applyDimensionFilters(rows) {
+  if (!activeDimensionFilters.length) return rows;
+  return rows.filter(function (row) {
+    return activeDimensionFilters.every(function (f) {
+      if (!f.values || f.values.length === 0) return true; // "All ..." — no restriction
+      return f.values.indexOf(row[f.column]) !== -1;
+    });
+  });
+}
+
+// ============================================
 // FETCH + LOAD
-// Pulls raw dt + every KPI column in one query, then computes all
-// four windows (MTD, MTD-prior, YTD, YTD-prior) client-side per KPI.
-// Only runs inside a real Domo runtime — outside of Domo the static
-// placeholder numbers baked into index.html stay as-is for preview.
-// Adjust LIMIT if BudgetBlindsData has more rows than this.
+// Pulls raw dt + every KPI column + the nav bar's dimension columns
+// in one query, caches the raw rows, then computes all four windows
+// (MTD, MTD-prior, YTD, YTD-prior) client-side per KPI. Only runs
+// inside a real Domo runtime — outside of Domo the static placeholder
+// numbers baked into index.html stay as-is for preview. Adjust LIMIT
+// if BudgetBlindsData has more rows than this.
 // ============================================
 var LIMIT = 100000;
+var cachedRows = [];
 
 function loadKpisFromDomo() {
   var fieldSet = {};
   fieldSet[DATE_COLUMN] = true;
+  DIMENSION_COLUMNS.forEach(function (c) { fieldSet[c] = true; });
   KPI_DEFS.forEach(function (d) {
     (d.columns || [d.column]).forEach(function (c) { if (c) fieldSet[c] = true; });
   });
@@ -457,7 +503,8 @@ function loadKpisFromDomo() {
 
   domo.get(query)
     .then(function (rows) {
-      renderAll(rows || []);
+      cachedRows = rows || [];
+      renderAll(cachedRows);
     })
     .catch(function (err) {
       console.error('Failed to load KPI data from ' + query, err);
@@ -467,14 +514,23 @@ function loadKpisFromDomo() {
 if (typeof domo !== 'undefined') {
   loadKpisFromDomo();
 
-  // Optional integration with the companion nav bar app: if it (or
-  // any other card) pushes a page-level filter via
-  // domo.filterContainer(), Domo notifies listening apps here so this
-  // row can re-render against the same audience. Safe no-op if the
-  // App Framework build doesn't expose onFilterUpdate.
+  // domo.onFilterUpdate fires whenever any card on the page (the nav
+  // bar included) calls domo.filterContainer(). Re-renders from the
+  // already-fetched cachedRows — no need to re-fetch, since dimension
+  // filtering happens client-side above. If nothing filters after
+  // pasting this into Domo, check the console: this logs the raw
+  // filter payload every time it fires, which is the fastest way to
+  // confirm (a) the hook is firing at all and (b) its shape matches
+  // what applyDimensionFilters() expects (column/operator/values).
   if (typeof domo.onFilterUpdate === 'function') {
-    domo.onFilterUpdate(function () {
-      loadKpisFromDomo();
+    domo.onFilterUpdate(function (filters) {
+      console.log('KPI row received filter update:', filters);
+      activeDimensionFilters = (filters || []).filter(function (f) {
+        return f.column !== DATE_COLUMN && f.operator === 'IN';
+      });
+      renderAll(cachedRows);
     });
+  } else {
+    console.warn('domo.onFilterUpdate is not available in this App Framework build — dimension filters from the nav bar will not reach this app.');
   }
 }

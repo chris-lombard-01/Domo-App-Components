@@ -125,9 +125,15 @@ Same App Code conventions as the nav bar app — see that app's README for the f
 
 Code goes directly into Domo's built-in editor, not through the `ryuu`/`domo` CLI — paste in the current contents of `index.html`, `styles.css`, `app.js`, and `manifest.json` when updating, then confirm the card's dataset binding still points at the right dataset.
 
-## Optional: reacting to the nav bar's filters
+## Reacting to the nav bar's filters
 
-If this app is placed on the same page as **Claude Nav**, its Reporting Period / Brand / Owner / Territory dropdowns push page-level filters via `domo.filterContainer()`. This app listens for that with `domo.onFilterUpdate()` (guarded as a no-op if the App Framework build doesn't expose it) and simply re-runs `loadKpisFromDomo()` — Domo re-scopes the `domo.get` query to the active filters automatically, so no extra wiring is needed here.
+If this app is placed on the same page as **Claude Nav**, selecting a Brand/Master ID/Owner/Territory scopes every KPI's numbers to that selection. This does **not** happen automatically — `domo.get()` here always queries the full unfiltered dataset regardless of what other cards on the page have filtered, so this app has to apply the nav bar's filter itself:
+
+1. `DIMENSION_COLUMNS` (`Brand`, `HFCMasterID`, `FranchiseName`, `TerrNum` — the nav bar's exact `data-column` values) are fetched alongside every KPI's own columns in the one `domo.get()` call, and the raw rows are cached in `cachedRows`.
+2. `domo.onFilterUpdate()` fires whenever any card on the page — the nav bar included — calls `domo.filterContainer()`. The handler keeps only `IN`-operator filters on a non-`dt` column (the nav bar's Reporting Period `BETWEEN` filter on `dt` is deliberately ignored — see Drill-down above for why this app keeps its own fixed MTD/YTD windows) and stores them as `activeDimensionFilters`.
+3. `renderAll()` runs `cachedRows` through `applyDimensionFilters()` — an empty `values` array means "All ..." was selected for that column (no restriction) — before computing any KPI, so a Brand/Owner/etc. selection re-scopes every card without a new `domo.get()` call.
+
+If nothing filters after pasting this into Domo, open the console: every `onFilterUpdate` firing logs the raw payload it received, which is the fastest way to tell whether the hook isn't firing at all (nothing logs) vs. firing with a shape `applyDimensionFilters()` doesn't expect (logs, but check the `column`/`operator`/`values` keys against what it's matching on).
 
 ## Re-theming
 
