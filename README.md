@@ -100,10 +100,10 @@ This started as a **DDX Brick** but was migrated to a full **App Code** custom a
 
 | | DDX Brick | App Code |
 |---|---|---|
-| `domo.js` | Auto-injected as `window.domo`; an explicit `<script src="domo.js">` tag 404s | Loaded for real via `<script src="domo.js"></script>` in `index.html` |
+| `domo.js` | Auto-injected as `window.domo`; an explicit `<script src="domo.js">` tag 404s | A relative `<script src="domo.js">` tag **also** 404s in this app's real dashboard embed context — confirmed against the live pro-code editor. Loaded instead via CDN: `https://cdn.domo.com/domo.js/1/domo.js` + `https://unpkg.com/ryuu.js@4.6.0/dist/domo.js` |
 | dataset alias | Auto-injected as `window.datasets` (array, order matches manifest mapping) | Not auto-injected, and Domo's editor flags any top-level `var datasets = [...]` as "looks migrated from a Brick" (top-level `var` becomes `window.datasets` either way) — so `app.js` just hardcodes `var DATASET_ALIAS = 'BudgetBlindsData';` instead of naming a `datasets` variable at all |
 
-`index.html` and `app.js` in this repo are set up for **App Code** (the script tag is present; the dataset alias is hardcoded rather than read off a `datasets` variable). If you ever go back to a Brick, the script tag needs to come back out and the alias would come from `window.datasets[0]` instead.
+`index.html` and `app.js` in this repo are set up for **App Code** (the CDN script tags are present; the dataset alias is hardcoded rather than read off a `datasets` variable). If you ever go back to a Brick, both `<script>` tags need to come back out (Brick auto-injects `window.domo`) and the alias would come from `window.datasets[0]` instead.
 
 The alias/column mapping is confirmed directly against **Resources → Datasets → schema** in the App Code editor: Dataset ID `f708d305-0238-4727-9fa1-80e7efa4d7d8`, alias `BudgetBlindsData`, columns `Brand→Brand`, `HFCMasterID→HFCMasterID`, `FranchiseName→Owner`, `TerrNum→TerrNumName` — matching `manifest.json` exactly, with live preview rows confirming the connection is real (not sample data).
 

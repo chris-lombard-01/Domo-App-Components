@@ -146,13 +146,14 @@
   <p>Placeholder for your existing charts/vizzes. They don't need to live inside this app — as long as they're built on a dataset sharing these columns, domo.filterContainer() calls from the nav bar above will filter them too.</p>
 </div>
 
-<!-- domo.js: this 404'd under DDX Bricks (window.domo was auto-injected there
-     instead, no tag needed) but is expected to resolve for real under a
-     migrated App Code app, per Domo's "Moving from Brick to App" guide.
-     app.js's domo.get/filterContainer calls are guarded to no-op if `domo`
-     isn't defined regardless, so this stays safe to preview in a plain
-     browser (where the 404 is harmless) too. -->
-<script src="domo.js"></script>
+<!-- domo.js served via CDN — the relative "domo.js" path 404s in this
+     app's real dashboard embed context (it is not auto-resolved the
+     way DDX Bricks used to auto-inject window.domo). Confirmed against
+     the live pro-code editor. app.js's domo.get/filterContainer calls
+     are guarded to no-op if `domo` isn't defined regardless, so this
+     stays safe to preview in a plain browser too. -->
+<script src="https://cdn.domo.com/domo.js/1/domo.js"></script>
+<script src="https://unpkg.com/ryuu.js@4.6.0/dist/domo.js" integrity="sha384-YYsd9wQ+wDlUWhvpfGdptxmNYIqBC+52oJtWgPKJadbs3sSFTY/+ZotPbEHTTRWz" crossorigin="anonymous"></script>
 <script src="app.js"></script>
 </body>
 </html>
