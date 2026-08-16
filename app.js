@@ -87,139 +87,112 @@ function saveNavState() {
 
 // ============================================
 // DROPDOWN BEHAVIOR
+// Native <select> elements, not a custom-built menu — this app runs
+// in an iframe sized to its Domo card, and a position:absolute menu
+// gets clipped the moment it would extend past that box (the clip is
+// the iframe boundary, not a CSS overflow setting, so no z-index/
+// position trick escapes it). A native select's open option list is
+// painted by the browser above the page/iframe stacking context, so
+// it isn't subject to that clipping — the same reason the date
+// pickers below already worked.
 // ============================================
 
-// Wires the open/close toggle for a dropdown (once) and its current
-// set of items (every time, since items can be replaced at runtime
-// by loadDropdownOptionsFromDomo()).
-function wireDropdown(dropdown) {
-  var toggleBtn = dropdown.querySelector('[data-toggle]');
-  var valueLabel = dropdown.querySelector('[data-value]');
-  var column = dropdown.getAttribute('data-column'); // e.g. "Brand", "HFCMasterID"
+// Wires a select's change handler (once) and restores its persisted
+// selection. Called both for the static-placeholder <option>s at
+// load and again after loadSelectOptionsFromDomo() replaces them with
+// real values.
+function wireSelect(select) {
+  var column = select.getAttribute('data-column'); // null for Compare — cosmetic only, no dataset column
 
-  if (!toggleBtn.dataset.wired) {
-    toggleBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      var isOpen = dropdown.classList.contains('open');
-      // close any other open dropdowns first
-      document.querySelectorAll('[data-dropdown].open').forEach(function (d) {
-        d.classList.remove('open');
-      });
-      if (!isOpen) dropdown.classList.add('open');
+  if (!select.dataset.wired) {
+    select.addEventListener('change', function () {
+      handleSelectChange(select, column);
     });
-    toggleBtn.dataset.wired = 'true';
+    select.dataset.wired = 'true';
   }
 
-  wireDropdownItems(dropdown, valueLabel, column);
-  restoreDropdownSelection(dropdown, valueLabel, column);
+  restoreSelectSelection(select, column);
 }
 
-// Attaches click handlers to whatever [data-select] items currently
-// exist inside this dropdown. Safe to call again after the item list
-// is replaced (e.g. once real dataset values load).
-function wireDropdownItems(dropdown, valueLabel, column) {
-  var items = dropdown.querySelectorAll('[data-select]');
+// A select's own value IS the filter value ("" for the "All ..."
+// option, since that <option> has value=""). Updates the .filtered
+// styling, persists the choice, and pushes it as a page filter (or,
+// for Compare, dispatches compareChange instead — see index.html).
+function handleSelectChange(select, column) {
+  var value = select.value;
+  var isAllOption = value === '';
+  select.classList.toggle('filtered', !isAllOption);
 
-  items.forEach(function (item, index) {
-    item.addEventListener('click', function () {
-      items.forEach(function (i) { i.classList.remove('selected'); });
-      item.classList.add('selected');
-      valueLabel.textContent = item.textContent;
-      dropdown.classList.remove('open');
+  if (!column) {
+    window.currentCompareMode = value;
+    navState.compare = value;
+    saveNavState();
+    document.dispatchEvent(new CustomEvent('compareChange', {
+      detail: { mode: value }
+    }));
+    return;
+  }
 
-      // The "All ___" option is always the first item in each menu —
-      // selecting it clears the filter for this column.
-      var isAllOption = index === 0;
+  navState.dropdowns[column] = value;
+  saveNavState();
 
-      if (!column) {
-        // Compare dropdown has no dataset column — it's not a page
-        // filter, it's a mode your own chart-rendering code reads.
-        // Wire your comparison logic to the 'compareChange' event
-        // below (or read window.currentCompareMode directly).
-        window.currentCompareMode = item.textContent;
-        navState.compare = item.textContent;
-        saveNavState();
-        document.dispatchEvent(new CustomEvent('compareChange', {
-          detail: { mode: item.textContent }
-        }));
-        return;
-      }
+  // Guard against running outside a real Domo runtime (e.g. previewing
+  // this file directly in a browser) — `domo` isn't declared there at
+  // all, so referencing it unconditionally throws.
+  if (typeof domo === 'undefined') return;
 
-      navState.dropdowns[column] = item.textContent;
-      saveNavState();
-
-      // Guard against running outside a real Domo runtime (e.g. previewing
-      // this file directly in a browser) — `domo` isn't declared there at
-      // all, so referencing it unconditionally throws.
-      if (typeof domo === 'undefined') return;
-
-      domo.filterContainer([{
-        column: column,
-        operator: 'IN',
-        values: isAllOption ? [] : [item.textContent],
-        dataType: 'STRING'
-      }]);
-    });
-  });
+  domo.filterContainer([{
+    column: column,
+    operator: 'IN',
+    values: isAllOption ? [] : [value],
+    dataType: 'STRING'
+  }]);
 }
 
-// Re-applies whatever was last selected for this dropdown (persisted
-// in navState) after its items are (re)built — both the initial
-// static-placeholder pass and the real-data pass from
-// loadDropdownOptionsFromDomo() call this. No-ops quietly if nothing
-// was ever selected (navState still at defaults) or if a previously
-// selected value no longer exists in the current item list.
-function restoreDropdownSelection(dropdown, valueLabel, column) {
+// Re-applies whatever was last selected for this select (persisted in
+// navState) after its <option>s are (re)built. No-ops quietly if
+// nothing was ever selected, or if a previously selected value no
+// longer exists among the current <option>s.
+function restoreSelectSelection(select, column) {
   var saved = column ? navState.dropdowns[column] : navState.compare;
   if (!saved) return;
 
-  var items = dropdown.querySelectorAll('[data-select]');
-  var match = null;
-  items.forEach(function (item) {
-    if (item.textContent === saved) match = item;
+  var hasOption = Array.prototype.some.call(select.options, function (opt) {
+    return opt.value === saved;
   });
-  if (!match) return;
+  if (!hasOption) return;
 
-  items.forEach(function (i) { i.classList.remove('selected'); });
-  match.classList.add('selected');
-  valueLabel.textContent = match.textContent;
+  select.value = saved;
+  select.classList.toggle('filtered', saved !== '');
 
   if (!column) {
-    window.currentCompareMode = match.textContent;
+    window.currentCompareMode = saved;
     document.dispatchEvent(new CustomEvent('compareChange', {
-      detail: { mode: match.textContent }
+      detail: { mode: saved }
     }));
     return;
   }
 
   if (typeof domo === 'undefined') return;
-  var isAllOption = items[0] === match;
   domo.filterContainer([{
     column: column,
     operator: 'IN',
-    values: isAllOption ? [] : [match.textContent],
+    values: saved === '' ? [] : [saved],
     dataType: 'STRING'
   }]);
 }
 
-document.querySelectorAll('[data-dropdown]').forEach(wireDropdown);
-
-// Close any open dropdown when clicking outside
-document.addEventListener('click', function () {
-  document.querySelectorAll('[data-dropdown].open').forEach(function (d) {
-    d.classList.remove('open');
-  });
-});
+document.querySelectorAll('[data-dropdown]').forEach(wireSelect);
 
 // ============================================
 // POPULATE DROPDOWNS FROM THE REAL DATASET
 // Only runs inside a real Domo runtime (domo dev or a published app).
-// Outside of Domo, the static placeholder items already in
+// Outside of Domo, the static placeholder <option>s already in
 // index.html (Two Maids, Owner A, etc.) are left as-is for preview.
 // ============================================
-function loadDropdownOptionsFromDomo() {
-  document.querySelectorAll('[data-dropdown][data-column]').forEach(function (dropdown) {
-    var column = dropdown.getAttribute('data-column');
+function loadSelectOptionsFromDomo() {
+  document.querySelectorAll('[data-dropdown][data-column]').forEach(function (select) {
+    var column = select.getAttribute('data-column');
     var alias = COLUMN_TO_ALIAS[column];
     if (!alias) return;
 
@@ -230,29 +203,23 @@ function loadDropdownOptionsFromDomo() {
 
     domo.get(query)
       .then(function (rows) {
-        var menu = dropdown.querySelector('.dropdown-menu');
-        var menuItems = menu.querySelectorAll('[data-select]');
-
-        // Keep the first item (the "All ..." option) and drop the
-        // rest of the static placeholders before appending real values.
-        menuItems.forEach(function (item, i) {
-          if (i > 0) item.remove();
+        // Keep the first <option> (the "All ..." choice, value="")
+        // and drop the rest of the static placeholders before
+        // appending real values.
+        Array.prototype.slice.call(select.options, 1).forEach(function (opt) {
+          opt.remove();
         });
 
         rows
           .map(function (row) { return row[alias]; })
           .filter(function (v) { return v !== null && v !== undefined && v !== ''; })
           .forEach(function (value) {
-            var el = document.createElement('div');
-            el.className = 'dropdown-item';
-            el.setAttribute('data-select', '');
-            el.textContent = String(value);
-            menu.appendChild(el);
+            var opt = document.createElement('option');
+            opt.textContent = String(value);
+            select.appendChild(opt);
           });
 
-        var valueLabel = dropdown.querySelector('[data-value]');
-        wireDropdownItems(dropdown, valueLabel, column);
-        restoreDropdownSelection(dropdown, valueLabel, column);
+        restoreSelectSelection(select, column);
       })
       .catch(function (err) {
         console.error('Failed to load options for ' + column + ' from ' + query, err);
@@ -261,7 +228,7 @@ function loadDropdownOptionsFromDomo() {
 }
 
 if (typeof domo !== 'undefined') {
-  loadDropdownOptionsFromDomo();
+  loadSelectOptionsFromDomo();
 }
 
 // ============================================

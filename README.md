@@ -2,12 +2,11 @@
 
 A drop-in navigation/filter bar for a Domo custom app, wired directly to the `BudgetBlindsData` dataset.
 
-- Subtle gray bar background
-- Dropdown filters: **Brand**, **Master ID**, **Owner**, **Territory**
-- Uppercase, small-caps filter labels
+- Subtle gray bar background, single row, no per-control caption — compact pills instead
+- Dropdown filters: **Brand**, **Master ID**, **Owner**, **Territory**, each a native `<select>` styled as a pill (see below for why)
 - **Reporting Period** segmented control: MTD / QTD / YTD / Custom (with a From/To date popover)
 - **Compare** dropdown
-- Seafoam-green accent on focus, selected options, and the active period pill
+- Seafoam-green accent on focus, an active filter, and the active period pill
 
 ## Files
 
@@ -20,7 +19,17 @@ app.js          Dropdown behavior, Reporting Period logic, and the domo.get/filt
 
 ## Preview it
 
-Open `index.html` in a browser (or `python3 -m http.server` from this folder). Outside of a real Domo runtime, `domo` is undefined, so `app.js` skips every `domo.get`/`domo.filterContainer` call and just leaves the static placeholder dropdown items in place (Two Maids, Owner A, etc.) — the bar is still fully interactive for design/layout work.
+Open `index.html` in a browser (or `python3 -m http.server` from this folder). Outside of a real Domo runtime, `domo` is undefined, so `app.js` skips every `domo.get`/`domo.filterContainer` call and just leaves the static placeholder `<option>`s in place (Two Maids, Owner A, etc.) — the bar is still fully interactive for design/layout work.
+
+## Why native `<select>` instead of a custom dropdown menu
+
+This app runs inside an iframe sized to its Domo card. A custom `position: absolute` menu (what this used to be) gets clipped the instant it would extend past that card's box — no `z-index`, `position: fixed`, or portal trick fixes that, because the clip is the iframe's own boundary, not a CSS `overflow` setting on some ancestor. That showed up as "the dropdown opens under the card and I have to scroll."
+
+Native `<select>` sidesteps it: the browser paints an open select's option list at the OS/window layer, above the page and above iframe boundaries — the same reason `<input type="date">`'s calendar in the Custom range fields already worked fine. Switching all five dropdowns (Brand/Master ID/Owner/Territory/Compare) to `<select>` fixes the clipping outright.
+
+The trade so this can happen: the trigger pill is fully custom-styled (`.pill-select` in `styles.css`, via `appearance: none` + a background-image chevron), but the open option list itself renders with OS chrome — no seafoam hover states inside it, since that layer isn't part of the page's DOM/CSS. That's not a missed detail, it's the mechanism that makes the fix work.
+
+This also let the per-control small-caps label go away: each select's first `<option value="">` (e.g. "All Brands") is self-describing, so the bar dropped from a two-line block per control to one compact pill — most of the height savings you asked for. A selection other than "All ..." gets a filled `.filtered` pill (seafoam background/border) so an active filter is still visible at a glance without the caption.
 
 ## Why a selection used to "filter and reset" — and how it's fixed
 
@@ -32,7 +41,7 @@ Because `localStorage` is shared across same-origin iframes, this also means pla
 
 ## How the pieces fit together
 
-`data-column` on each dropdown in `index.html` holds the **raw dataset column name** — `Brand`, `HFCMasterID`, `FranchiseName`, `TerrNum`. That's what `domo.filterContainer()` needs, because it's pushing a filter to *other* cards on the page, which only know real column names.
+`data-column` on each `<select data-dropdown>` in `index.html` holds the **raw dataset column name** — `Brand`, `HFCMasterID`, `FranchiseName`, `TerrNum`. That's what `domo.filterContainer()` needs, because it's pushing a filter to *other* cards on the page, which only know real column names. The Compare select has `data-dropdown` but no `data-column`, marking it as cosmetic-only (see below).
 
 `app.js` also needs the **field alias** from `manifest.json`'s `datasetsMapping` to query this app's own dataset mapping via `domo.get`. `COLUMN_TO_ALIAS` bridges the two:
 
@@ -47,15 +56,15 @@ var COLUMN_TO_ALIAS = {
 };
 ```
 
-On load, `loadDropdownOptionsFromDomo()` runs one `domo.get('/data/v1/BudgetBlindsData?fields=<alias>&groupby=<alias>')` per dropdown, keeps the existing "All ..." item, and appends the real distinct values as new `.dropdown-item` elements.
+On load, `loadSelectOptionsFromDomo()` runs one `domo.get('/data/v1/BudgetBlindsData?fields=<alias>&groupby=<alias>')` per select, keeps the existing "All ..." `<option value="">`, and appends the real distinct values as new `<option>` elements (each option's `value` defaults to its text — "Two Maids" the text is also "Two Maids" the value).
 
-Selecting an item calls:
+Selecting an option calls:
 
 ```js
 domo.filterContainer([{
   column: column,               // the raw column, e.g. "FranchiseName"
   operator: 'IN',
-  values: isAllOption ? [] : [item.textContent],
+  values: isAllOption ? [] : [value],   // value === '' is the "All ..." option
   dataType: 'STRING'
 }]);
 ```
@@ -70,7 +79,7 @@ var DATE_COLUMN = 'dt';
 
 MTD/QTD/YTD compute their range from today's date each time they're clicked; Custom waits until both From/To are filled in. The default MTD range is also pushed once on page load, so cards are filtered correctly before the user touches anything.
 
-**Compare** has no dataset column — it's not something `filterContainer` can express (it's a display mode like "vs. Prior Period", not a row filter). Selecting an item stores `window.currentCompareMode` and dispatches a `compareChange` event instead:
+**Compare** has no dataset column — it's not something `filterContainer` can express (it's a display mode like "vs. Prior Period", not a row filter). Selecting an option stores `window.currentCompareMode` and dispatches a `compareChange` event instead:
 
 ```js
 document.addEventListener('compareChange', function (e) {
@@ -82,8 +91,8 @@ document.addEventListener('compareChange', function (e) {
 ## Why you might still be seeing sample data
 
 - **Most likely:** you're looking at Dev Studio's built-in code-editor preview. That preview always shows generic sample rows, regardless of `manifest.json`, until this app is added as an actual **card** on a real page and that card instance goes through its own *Select Dataset → confirm field mapping → Save & Finish* step.
-- **If you've done that and it's still wrong:** open the browser console. `loadDropdownOptionsFromDomo()` logs `Failed to load options for <column> from <query>` on any `domo.get` error.
-- **If you're seeing the static placeholders** ("Two Maids", "Owner A", "1001", "West"/"Midwest"/"Southeast") specifically — that means `domo` was undefined when the page loaded, so `loadDropdownOptionsFromDomo()` never ran at all. That points to not running inside a real Domo runtime (file opened directly, or previewed somewhere that doesn't inject `domo.js`), which is a different problem than Domo's own sample-data preview.
+- **If you've done that and it's still wrong:** open the browser console. `loadSelectOptionsFromDomo()` logs `Failed to load options for <column> from <query>` on any `domo.get` error.
+- **If you're seeing the static placeholders** ("Two Maids", "Owner A", "1001", "West"/"Midwest"/"Southeast") specifically — that means `domo` was undefined when the page loaded, so `loadSelectOptionsFromDomo()` never ran at all. That points to not running inside a real Domo runtime (file opened directly, or previewed somewhere that doesn't inject `domo.js`), which is a different problem than Domo's own sample-data preview.
 
 ## The manifest.json
 
@@ -113,9 +122,10 @@ After pasting updated code in, confirm the card's dataset binding still points a
 
 ## Re-theming
 
-All colors live as CSS custom properties at the top of `styles.css` (`--bar-bg`, `--accent`, etc.), so swapping the seafoam accent or gray tone is a one-line change per variable.
+All colors live as CSS custom properties at the top of `styles.css` (`--bar-bg`, `--accent`, etc.), so swapping the seafoam accent or gray tone is a one-line change per variable. The pill chevron is an inline SVG data URI in `.pill-select`'s `background-image` — its stroke color (`%237A8286` = `--text-label`) has to be edited there directly since CSS variables can't reach into a data URI.
 
 ## Extending
 
-- **More dataset-driven filters:** add a field to `datasetsMapping[0].fields` in `manifest.json`, add a matching `data-dropdown data-column="..."` block to `index.html`, and add an entry to `COLUMN_TO_ALIAS` in `app.js`.
-- **A different operator than `IN`/`EQUALS`:** edit the `domo.filterContainer([...])` call inside `wireDropdownItems()`.
+- **More dataset-driven filters:** add a field to `datasetsMapping[0].fields` in `manifest.json`, add a matching `<select class="pill-select" data-dropdown data-column="...">` block to `index.html`, and add an entry to `COLUMN_TO_ALIAS` in `app.js`.
+- **A different operator than `IN`/`EQUALS`:** edit the `domo.filterContainer([...])` call inside `handleSelectChange()`.
+- **Bring the caption labels back:** if a stakeholder wants explicit "Brand"/"Owner" labels over each pill instead of relying on the default option text, that's a `.filter-group`-style wrapper + `.filter-label` span per select — reintroduces the two-line-per-control height this redesign removed, so worth confirming it's actually wanted before adding it back.

@@ -25,116 +25,70 @@
 <!-- ============================================
      NAV BAR
      ============================================ -->
+<!-- Native <select> for every dropdown here on purpose: this app runs
+     inside an iframe sized to its Domo card, so a custom-built
+     position:absolute menu gets clipped the instant it would extend
+     past the card's box — no z-index/CSS fix escapes that, since the
+     clip is the iframe boundary itself, not an overflow style. Native
+     select popups are painted by the browser above the page/iframe
+     stacking context (the same reason the date pickers below already
+     work), so they're the one dropdown style immune to this. Each
+     select's first option (value="") IS the "All ..." state and also
+     doubles as its own label, which is what let the separate
+     small-caps caption above each control go away. -->
 <div class="filter-bar" id="filterBar">
 
-  <!-- BRAND -->
-  <div class="filter-group">
-    <span class="filter-label">Brand</span>
-    <div class="dropdown" data-dropdown data-column="Brand">
-      <button class="dropdown-btn" data-toggle>
-        <span data-value>All Brands</span>
-        <span class="chevron"></span>
-      </button>
-      <div class="dropdown-menu">
-        <div class="dropdown-item selected" data-select>All Brands</div>
-        <div class="dropdown-item" data-select>Two Maids</div>
-        <div class="dropdown-item" data-select>Bark &amp; Mane</div>
-      </div>
-    </div>
-  </div>
+  <select class="pill-select" data-dropdown data-column="Brand">
+    <option value="">All Brands</option>
+    <option>Two Maids</option>
+    <option>Bark &amp; Mane</option>
+  </select>
 
-  <!-- MASTER ID -->
-  <div class="filter-group">
-    <span class="filter-label">Master ID</span>
-    <div class="dropdown" data-dropdown data-column="HFCMasterID">
-      <button class="dropdown-btn" data-toggle>
-        <span data-value>All IDs</span>
-        <span class="chevron"></span>
-      </button>
-      <div class="dropdown-menu">
-        <div class="dropdown-item selected" data-select>All IDs</div>
-        <div class="dropdown-item" data-select>1001</div>
-        <div class="dropdown-item" data-select>1002</div>
-        <div class="dropdown-item" data-select>1003</div>
-      </div>
-    </div>
-  </div>
+  <select class="pill-select" data-dropdown data-column="HFCMasterID">
+    <option value="">All IDs</option>
+    <option>1001</option>
+    <option>1002</option>
+    <option>1003</option>
+  </select>
 
-  <!-- OWNER -->
-  <div class="filter-group">
-    <span class="filter-label">Owner</span>
-    <div class="dropdown" data-dropdown data-column="FranchiseName">
-      <button class="dropdown-btn" data-toggle>
-        <span data-value>All Owners</span>
-        <span class="chevron"></span>
-      </button>
-      <div class="dropdown-menu">
-        <div class="dropdown-item selected" data-select>All Owners</div>
-        <div class="dropdown-item" data-select>Owner A</div>
-        <div class="dropdown-item" data-select>Owner B</div>
-      </div>
-    </div>
-  </div>
+  <select class="pill-select" data-dropdown data-column="FranchiseName">
+    <option value="">All Owners</option>
+    <option>Owner A</option>
+    <option>Owner B</option>
+  </select>
 
-  <!-- TERRITORY -->
-  <div class="filter-group">
-    <span class="filter-label">Territory</span>
-    <div class="dropdown" data-dropdown data-column="TerrNum">
-      <button class="dropdown-btn" data-toggle>
-        <span data-value>All Territories</span>
-        <span class="chevron"></span>
-      </button>
-      <div class="dropdown-menu">
-        <div class="dropdown-item selected" data-select>All Territories</div>
-        <div class="dropdown-item" data-select>West</div>
-        <div class="dropdown-item" data-select>Midwest</div>
-        <div class="dropdown-item" data-select>Southeast</div>
-      </div>
-    </div>
-  </div>
+  <select class="pill-select" data-dropdown data-column="TerrNum">
+    <option value="">All Territories</option>
+    <option>West</option>
+    <option>Midwest</option>
+    <option>Southeast</option>
+  </select>
 
   <div class="divider"></div>
 
   <!-- REPORTING PERIOD -->
-  <div class="filter-group">
-    <span class="filter-label">Reporting Period</span>
-    <div class="segmented" id="periodToggle">
-      <button class="active" data-period>MTD</button>
-      <button data-period>QTD</button>
-      <button data-period>YTD</button>
-      <button data-period="custom">Custom</button>
-    </div>
+  <div class="segmented" id="periodToggle">
+    <button class="active" data-period>MTD</button>
+    <button data-period>QTD</button>
+    <button data-period>YTD</button>
+    <button data-period="custom">Custom</button>
   </div>
 
   <!-- CUSTOM DATE RANGE — appears only when "Custom" is selected above -->
   <div class="date-range" id="dateRange">
-    <div class="date-field">
-      <span class="filter-label">From</span>
-      <input type="date" id="fromDate">
-    </div>
-    <div class="date-field">
-      <span class="filter-label">To</span>
-      <input type="date" id="toDate">
-    </div>
+    <input type="date" id="fromDate" class="pill-date">
+    <span class="date-sep">to</span>
+    <input type="date" id="toDate" class="pill-date">
   </div>
 
   <div class="spacer"></div>
 
-  <!-- COMPARE -->
-  <div class="filter-group">
-    <span class="filter-label">Compare</span>
-    <div class="dropdown" data-dropdown>
-      <button class="dropdown-btn" data-toggle>
-        <span data-value>Prior Period</span>
-        <span class="chevron"></span>
-      </button>
-      <div class="dropdown-menu">
-        <div class="dropdown-item selected" data-select>Prior Period</div>
-        <div class="dropdown-item" data-select>Prior Year</div>
-        <div class="dropdown-item" data-select>No Comparison</div>
-      </div>
-    </div>
-  </div>
+  <!-- COMPARE — no data-column: it's a display mode, not a page filter -->
+  <select class="pill-select" data-dropdown id="compareSelect">
+    <option>Prior Period</option>
+    <option>Prior Year</option>
+    <option>No Comparison</option>
+  </select>
 
 </div>
 

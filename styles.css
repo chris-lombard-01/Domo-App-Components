@@ -7,11 +7,11 @@
   --control-bg: #FFFFFF;
   --control-border: #D8DBDD;
   --text-main: #2E3436;
-  --text-label: #7A8286;      /* muted gray for small caps labels */
+  --text-label: #7A8286;      /* muted gray, used for the segmented control's inactive labels */
   --accent: #5FBEA5;          /* seafoam green */
   --accent-light: #E6F5F1;    /* pale seafoam for hover/active backgrounds */
   --accent-text: #1F5C4E;     /* dark seafoam for text on light accent bg */
-  --radius: 8px;
+  --radius: 999px;            /* pill shape — compact bar, no per-control caption row */
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -19,127 +19,69 @@
 
 /* ============================================
    NAV BAR CONTAINER
+   A single row of pills, no per-control label above each one — every
+   control is one line tall instead of two, which is most of the
+   height this bar used to spend.
    ============================================ */
 .filter-bar {
   background: var(--bar-bg);
   border: 1px solid var(--bar-border);
   border-radius: 12px;
-  padding: 14px 18px;
+  padding: 8px 12px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 8px;
   max-width: 1100px;
   width: 100%;
 }
 
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/* Small caps label above every control */
-.filter-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-label);
-  padding-left: 2px;
-}
-
 /* ============================================
-   DROPDOWN CONTROLS
+   PILL SELECT — native <select>, styled as a compact pill.
+   appearance:none + a background-image chevron is the only way to
+   theme a native select's closed state; the open option list stays
+   OS-chrome (unstyleable), which is the deliberate trade for it
+   never being clipped by this app's iframe — see the comment above
+   the markup in index.html.
    ============================================ */
-.dropdown {
-  position: relative;
-}
-
-.dropdown-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--control-bg);
+.pill-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--control-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 9 9'%3E%3Cpath d='M1 3 L4.5 6.5 L8 3' fill='none' stroke='%237A8286' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
   border: 1px solid var(--control-border);
   border-radius: var(--radius);
-  padding: 8px 12px;
+  padding: 7px 26px 7px 13px;
   font-family: var(--font);
-  font-size: 13.5px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--text-main);
   cursor: pointer;
+  max-width: 150px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.dropdown-btn:hover {
+.pill-select:hover {
   border-color: var(--accent);
 }
 
-.dropdown-btn:focus-visible {
+.pill-select:focus-visible {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-light);
 }
 
-.dropdown.open .dropdown-btn {
+/* A non-default selection gets a filled pill so an active filter is
+   visible at a glance without needing its old caption line back. */
+.pill-select.filtered {
+  background-color: var(--accent-light);
   border-color: var(--accent);
-  background: var(--accent-light);
   color: var(--accent-text);
-}
-
-.chevron {
-  width: 9px;
-  height: 9px;
-  border-right: 1.6px solid currentColor;
-  border-bottom: 1.6px solid currentColor;
-  transform: rotate(45deg);
-  margin-top: -3px;
-  opacity: 0.6;
-  flex-shrink: 0;
-  transition: transform 0.15s ease;
-}
-
-.dropdown.open .chevron {
-  transform: rotate(-135deg);
-  margin-top: 3px;
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  min-width: 180px;
-  background: var(--control-bg);
-  border: 1px solid var(--control-border);
-  border-radius: var(--radius);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-  padding: 6px;
-  display: none;
-  z-index: 20;
-}
-
-.dropdown.open .dropdown-menu {
-  display: block;
-}
-
-.dropdown-item {
-  padding: 8px 10px;
-  font-size: 13.5px;
-  color: var(--text-main);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.dropdown-item:hover {
-  background: var(--accent-light);
-  color: var(--accent-text);
-}
-
-.dropdown-item.selected {
-  background: var(--accent);
-  color: #fff;
   font-weight: 600;
 }
 
@@ -159,11 +101,11 @@
   border: none;
   background: transparent;
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text-label);
-  padding: 6px 14px;
-  border-radius: 6px;
+  padding: 5px 13px;
+  border-radius: 999px;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
@@ -182,47 +124,46 @@
    ============================================ */
 .date-range {
   display: none;               /* hidden by default, toggled via JS */
-  align-items: flex-end;
-  gap: 10px;
+  align-items: center;
+  gap: 6px;
 }
 
 .date-range.visible {
   display: flex;
 }
 
-.date-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.date-sep {
+  font-size: 12px;
+  color: var(--text-label);
 }
 
-.date-field input[type="date"] {
+.pill-date {
   background: var(--control-bg);
   border: 1px solid var(--control-border);
   border-radius: var(--radius);
-  padding: 7px 10px;
+  padding: 6px 10px;
   font-family: var(--font);
-  font-size: 13.5px;
+  font-size: 12.5px;
   color: var(--text-main);
   cursor: pointer;
 }
 
-.date-field input[type="date"]:hover {
+.pill-date:hover {
   border-color: var(--accent);
 }
 
-.date-field input[type="date"]:focus-visible {
+.pill-date:focus-visible {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-light);
 }
 
-/* Divider between filter groups and reporting period */
+/* Divider between the dataset dropdowns and Reporting Period */
 .divider {
   width: 1px;
   align-self: stretch;
   background: var(--bar-border);
-  margin: 2px 0;
+  margin: 4px 2px;
 }
 
 /* Spacer to push Compare to the right on wide screens */
