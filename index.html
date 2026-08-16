@@ -159,12 +159,13 @@
   </div>
 </div>
 
-<!-- domo.js: provided for real under App Code once this is pasted into
-     Domo's editor and the card's dataset binding is confirmed (see
-     README). Loading it here keeps this file previewable in a plain
+<!-- domo.js served via CDN, matching the companion nav bar app — a
+     relative "domo.js" path 404s in this app's real dashboard embed
+     context. Loading it here keeps this file previewable in a plain
      browser too — app.js guards every domo.* call with a typeof check
      and just leaves the placeholder numbers above in place. -->
-<script src="domo.js"></script>
+<script src="https://cdn.domo.com/domo.js/1/domo.js"></script>
+<script src="https://unpkg.com/ryuu.js@4.6.0/dist/domo.js" integrity="sha384-YYsd9wQ+wDlUWhvpfGdptxmNYIqBC+52oJtWgPKJadbs3sSFTY/+ZotPbEHTTRWz" crossorigin="anonymous"></script>
 <script src="app.js"></script>
 </body>
 </html>
