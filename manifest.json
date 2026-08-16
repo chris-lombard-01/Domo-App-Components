@@ -1,6 +1,6 @@
 {
-   "id": "0b046e32-0ef9-46b9-87bc-8a22aa4b438b",
-   "name": "Claude Nav",
+   "id": "",
+   "name": "Claude KPI Row",
    "version": "0.0.1",
    "datasetsMapping": [
       {
@@ -8,20 +8,32 @@
          "alias": "BudgetBlindsData",
          "fields": [
             {
-               "alias": "Brand",
-               "columnName": "Brand"
+               "alias": "dt",
+               "columnName": "dt"
             },
             {
-               "alias": "HFCMasterID",
-               "columnName": "HFCMasterID"
+               "alias": "Revenue",
+               "columnName": "Revenue"
             },
             {
-               "alias": "Owner",
-               "columnName": "FranchiseName"
+               "alias": "Leads",
+               "columnName": "Leads"
             },
             {
-               "alias": "TerrNumName",
-               "columnName": "TerrNum"
+               "alias": "JobsBooked",
+               "columnName": "JobsBooked"
+            },
+            {
+               "alias": "CloseRate",
+               "columnName": "CloseRate"
+            },
+            {
+               "alias": "AvgTicket",
+               "columnName": "AvgTicket"
+            },
+            {
+               "alias": "MarketingSpend",
+               "columnName": "MarketingSpend"
             }
          ],
          "dql": null
@@ -29,6 +41,6 @@
    ],
    "size": {
       "width": 12,
-      "height": 2
+      "height": 3
    }
 }

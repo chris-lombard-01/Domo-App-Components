@@ -3,155 +3,137 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Claude Nav</title>
+<title>Claude KPI Row</title>
 <link rel="stylesheet" href="styles.css" />
-<style>
-  body {
-    margin: 0;
-    padding: 24px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: #fafbfb;
-  }
-  #app-body {
-    margin-top: 24px;
-    color: #2E3436;
-  }
-  #app-body h2 { font-size: 16px; margin: 0 0 8px; }
-  #app-body p { font-size: 13px; color: #6b7271; }
-</style>
 </head>
 <body>
 
 <!-- ============================================
-     NAV BAR
+     KPI ROW
+     Each .kpi-card is self-contained: --kpi-color drives the icon
+     chip/accent, data-kpi matches a key in KPI_DEFS (app.js), and the
+     data-mtd-value / data-mtd-delta / data-ytd-value / data-ytd-delta
+     spans are what app.js overwrites once real numbers load. The
+     numbers baked into the markup below are just preview placeholders
+     shown when `domo` isn't defined (e.g. opening this file directly).
      ============================================ -->
-<div class="filter-bar" id="filterBar">
+<div class="kpi-row" id="kpiRow">
 
-  <!-- BRAND -->
-  <div class="filter-group">
-    <span class="filter-label">Brand</span>
-    <div class="dropdown" data-dropdown data-column="Brand">
-      <button class="dropdown-btn" data-toggle>
-        <span data-value>All Brands</span>
-        <span class="chevron"></span>
-      </button>
-      <div class="dropdown-menu">
-        <div class="dropdown-item selected" data-select>All Brands</div>
-        <div class="dropdown-item" data-select>Two Maids</div>
-        <div class="dropdown-item" data-select>Bark &amp; Mane</div>
-      </div>
+  <!-- REVENUE -->
+  <div class="kpi-card" data-kpi="Revenue" style="--kpi-color:#5FBEA5">
+    <div class="kpi-header">
+      <span class="kpi-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.2c0-1.2-1.2-2.2-2.8-2.2s-2.8 1-2.8 2.2 1.2 1.8 2.8 2.2c1.6.4 2.8 1 2.8 2.2s-1.2 2.2-2.8 2.2-2.8-1-2.8-2.2M12 5.5v13"/></svg>
+      </span>
+      <span class="kpi-title">Revenue</span>
+    </div>
+    <div class="kpi-value" data-mtd-value>$128,400</div>
+    <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>8.4% vs last month</div>
+    <div class="kpi-divider"></div>
+    <div class="kpi-ytd">
+      <span class="kpi-ytd-label">YTD</span>
+      <span class="kpi-ytd-value" data-ytd-value>$942,100</span>
+      <span class="kpi-ytd-delta up" data-ytd-delta><span class="arrow"></span>12.1% vs last yr</span>
     </div>
   </div>
 
-  <!-- MASTER ID -->
-  <div class="filter-group">
-    <span class="filter-label">Master ID</span>
-    <div class="dropdown" data-dropdown data-column="HFCMasterID">
-      <button class="dropdown-btn" data-toggle>
-        <span data-value>All IDs</span>
-        <span class="chevron"></span>
-      </button>
-      <div class="dropdown-menu">
-        <div class="dropdown-item selected" data-select>All IDs</div>
-        <div class="dropdown-item" data-select>1001</div>
-        <div class="dropdown-item" data-select>1002</div>
-        <div class="dropdown-item" data-select>1003</div>
-      </div>
+  <!-- LEADS -->
+  <div class="kpi-card" data-kpi="Leads" style="--kpi-color:#4C8FD1">
+    <div class="kpi-header">
+      <span class="kpi-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+      </span>
+      <span class="kpi-title">Leads</span>
+    </div>
+    <div class="kpi-value" data-mtd-value>342</div>
+    <div class="kpi-delta down" data-mtd-delta><span class="arrow"></span>3.1% vs last month</div>
+    <div class="kpi-divider"></div>
+    <div class="kpi-ytd">
+      <span class="kpi-ytd-label">YTD</span>
+      <span class="kpi-ytd-value" data-ytd-value>2,910</span>
+      <span class="kpi-ytd-delta up" data-ytd-delta><span class="arrow"></span>6.7% vs last yr</span>
     </div>
   </div>
 
-  <!-- OWNER -->
-  <div class="filter-group">
-    <span class="filter-label">Owner</span>
-    <div class="dropdown" data-dropdown data-column="FranchiseName">
-      <button class="dropdown-btn" data-toggle>
-        <span data-value>All Owners</span>
-        <span class="chevron"></span>
-      </button>
-      <div class="dropdown-menu">
-        <div class="dropdown-item selected" data-select>All Owners</div>
-        <div class="dropdown-item" data-select>Owner A</div>
-        <div class="dropdown-item" data-select>Owner B</div>
-      </div>
+  <!-- JOBS BOOKED -->
+  <div class="kpi-card" data-kpi="JobsBooked" style="--kpi-color:#8B7FD1">
+    <div class="kpi-header">
+      <span class="kpi-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 15l2 2 4-4"/></svg>
+      </span>
+      <span class="kpi-title">Jobs Booked</span>
+    </div>
+    <div class="kpi-value" data-mtd-value>176</div>
+    <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>5.9% vs last month</div>
+    <div class="kpi-divider"></div>
+    <div class="kpi-ytd">
+      <span class="kpi-ytd-label">YTD</span>
+      <span class="kpi-ytd-value" data-ytd-value>1,384</span>
+      <span class="kpi-ytd-delta up" data-ytd-delta><span class="arrow"></span>9.4% vs last yr</span>
     </div>
   </div>
 
-  <!-- TERRITORY -->
-  <div class="filter-group">
-    <span class="filter-label">Territory</span>
-    <div class="dropdown" data-dropdown data-column="TerrNum">
-      <button class="dropdown-btn" data-toggle>
-        <span data-value>All Territories</span>
-        <span class="chevron"></span>
-      </button>
-      <div class="dropdown-menu">
-        <div class="dropdown-item selected" data-select>All Territories</div>
-        <div class="dropdown-item" data-select>West</div>
-        <div class="dropdown-item" data-select>Midwest</div>
-        <div class="dropdown-item" data-select>Southeast</div>
-      </div>
+  <!-- CLOSE RATE -->
+  <div class="kpi-card" data-kpi="CloseRate" style="--kpi-color:#E0A83E">
+    <div class="kpi-header">
+      <span class="kpi-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M19 5 5 19"/></svg>
+      </span>
+      <span class="kpi-title">Close Rate</span>
+    </div>
+    <div class="kpi-value" data-mtd-value>51.5%</div>
+    <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>2.2 pts vs last month</div>
+    <div class="kpi-divider"></div>
+    <div class="kpi-ytd">
+      <span class="kpi-ytd-label">YTD</span>
+      <span class="kpi-ytd-value" data-ytd-value>47.6%</span>
+      <span class="kpi-ytd-delta down" data-ytd-delta><span class="arrow"></span>1.0 pt vs last yr</span>
     </div>
   </div>
 
-  <div class="divider"></div>
-
-  <!-- REPORTING PERIOD -->
-  <div class="filter-group">
-    <span class="filter-label">Reporting Period</span>
-    <div class="segmented" id="periodToggle">
-      <button class="active" data-period>MTD</button>
-      <button data-period>QTD</button>
-      <button data-period>YTD</button>
-      <button data-period="custom">Custom</button>
+  <!-- AVG TICKET -->
+  <div class="kpi-card" data-kpi="AvgTicket" style="--kpi-color:#3FA7A0">
+    <div class="kpi-header">
+      <span class="kpi-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.3 12.7 4.4a2 2 0 0 0-1.4-.6H5a1 1 0 0 0-1 1v6.3c0 .5.2 1 .6 1.4l7.9 7.9a2 2 0 0 0 2.8 0l5.3-5.3a2 2 0 0 0 0-2.8Z"/><circle cx="8" cy="8.5" r="1.2"/></svg>
+      </span>
+      <span class="kpi-title">Avg Ticket</span>
+    </div>
+    <div class="kpi-value" data-mtd-value>$729</div>
+    <div class="kpi-delta up" data-mtd-delta><span class="arrow"></span>1.8% vs last month</div>
+    <div class="kpi-divider"></div>
+    <div class="kpi-ytd">
+      <span class="kpi-ytd-label">YTD</span>
+      <span class="kpi-ytd-value" data-ytd-value>$681</span>
+      <span class="kpi-ytd-delta up" data-ytd-delta><span class="arrow"></span>4.3% vs last yr</span>
     </div>
   </div>
 
-  <!-- CUSTOM DATE RANGE — appears only when "Custom" is selected above -->
-  <div class="date-range" id="dateRange">
-    <div class="date-field">
-      <span class="filter-label">From</span>
-      <input type="date" id="fromDate">
+  <!-- MARKETING SPEND -->
+  <div class="kpi-card" data-kpi="MarketingSpend" style="--kpi-color:#E07856">
+    <div class="kpi-header">
+      <span class="kpi-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a4 4 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12"/></svg>
+      </span>
+      <span class="kpi-title">Marketing Spend</span>
     </div>
-    <div class="date-field">
-      <span class="filter-label">To</span>
-      <input type="date" id="toDate">
-    </div>
-  </div>
-
-  <div class="spacer"></div>
-
-  <!-- COMPARE -->
-  <div class="filter-group">
-    <span class="filter-label">Compare</span>
-    <div class="dropdown" data-dropdown>
-      <button class="dropdown-btn" data-toggle>
-        <span data-value>Prior Period</span>
-        <span class="chevron"></span>
-      </button>
-      <div class="dropdown-menu">
-        <div class="dropdown-item selected" data-select>Prior Period</div>
-        <div class="dropdown-item" data-select>Prior Year</div>
-        <div class="dropdown-item" data-select>No Comparison</div>
-      </div>
+    <div class="kpi-value" data-mtd-value>$18,250</div>
+    <div class="kpi-delta down" data-mtd-delta><span class="arrow"></span>4.6% vs last month</div>
+    <div class="kpi-divider"></div>
+    <div class="kpi-ytd">
+      <span class="kpi-ytd-label">YTD</span>
+      <span class="kpi-ytd-value" data-ytd-value>$134,900</span>
+      <span class="kpi-ytd-delta down" data-ytd-delta><span class="arrow"></span>2.9% vs last yr</span>
     </div>
   </div>
 
 </div>
 
-<!-- ============================================
-     APP CONTENT — your existing charts/cards go here
-     ============================================ -->
-<div id="app-body">
-  <h2>App Studio content area</h2>
-  <p>Placeholder for your existing charts/vizzes. They don't need to live inside this app — as long as they're built on a dataset sharing these columns, domo.filterContainer() calls from the nav bar above will filter them too.</p>
-</div>
-
-<!-- domo.js: this 404'd under DDX Bricks (window.domo was auto-injected there
-     instead, no tag needed) but is expected to resolve for real under a
-     migrated App Code app, per Domo's "Moving from Brick to App" guide.
-     app.js's domo.get/filterContainer calls are guarded to no-op if `domo`
-     isn't defined regardless, so this stays safe to preview in a plain
-     browser (where the 404 is harmless) too. -->
+<!-- domo.js: provided for real under App Code once this is pasted into
+     Domo's editor and the card's dataset binding is confirmed (see
+     README). Loading it here keeps this file previewable in a plain
+     browser too — app.js guards every domo.* call with a typeof check
+     and just leaves the placeholder numbers above in place. -->
 <script src="domo.js"></script>
 <script src="app.js"></script>
 </body>

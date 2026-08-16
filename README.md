@@ -1,113 +1,93 @@
-# Claude Nav — Domo App Studio Custom Nav Bar
+# Claude KPI Row — Domo App Studio KPI Dashboard
 
-A drop-in navigation/filter bar for a Domo custom app, wired directly to the `BudgetBlindsData` dataset.
+A drop-in row of 4-6 KPI cards for a Domo custom app, each showing an **MTD value with vs-last-month delta** and a **YTD value with vs-last-year delta**, wired directly to the `BudgetBlindsData` dataset. Built to sit on the same page as the companion **Claude Nav** app (same seafoam theme, same App Code conventions).
 
-- Subtle gray bar background
-- Dropdown filters: **Brand**, **Master ID**, **Owner**, **Territory**
-- Uppercase, small-caps filter labels
-- **Reporting Period** segmented control: MTD / QTD / YTD / Custom (with a From/To date popover)
-- **Compare** dropdown
-- Seafoam-green accent on focus, selected options, and the active period pill
+- 6 cards in a single row (Revenue, Leads, Jobs Booked, Close Rate, Avg Ticket, Marketing Spend by default), wrapping to 3 / 2 / 1 across as the page narrows
+- Each card gets its own accent color as a top bar + tinted icon chip, so a metric is identifiable before you've read the title
+- Big MTD number with a green/red delta pill vs. the same number of days last month
+- Smaller YTD line below a divider, with its own delta vs. the same Jan 1-to-date window last year
+- All colors/spacing live as CSS custom properties for easy re-theming
 
 ## Files
 
 ```
 manifest.json   Required by Domo — app metadata, size, and dataset mapping (datasetsMapping)
-index.html      The nav bar markup + a placeholder content area for the rest of your page
-styles.css      All nav bar styling (CSS variables at the top for easy re-theming)
-app.js          Dropdown behavior, Reporting Period logic, and the domo.get/filterContainer wiring
+index.html      The 6 KPI cards + preview placeholder numbers
+styles.css      All card styling (CSS variables at the top for easy re-theming)
+app.js          KPI definitions, MTD/YTD math, and the domo.get wiring
 ```
 
 ## Preview it
 
-Open `index.html` in a browser (or `python3 -m http.server` from this folder). Outside of a real Domo runtime, `domo` is undefined, so `app.js` skips every `domo.get`/`domo.filterContainer` call and just leaves the static placeholder dropdown items in place (Two Maids, Owner A, etc.) — the bar is still fully interactive for design/layout work.
+Open `index.html` in a browser (or `python3 -m http.server` from this folder). Outside of a real Domo runtime, `domo` is undefined, so `app.js` skips its `domo.get` call and leaves the placeholder numbers already baked into `index.html` in place — the row is still fully styled and responsive for design/layout work.
 
 ## How the pieces fit together
 
-`data-column` on each dropdown in `index.html` holds the **raw dataset column name** — `Brand`, `HFCMasterID`, `FranchiseName`, `TerrNum`. That's what `domo.filterContainer()` needs, because it's pushing a filter to *other* cards on the page, which only know real column names.
+Each card in `index.html` is a `.kpi-card` with:
 
-`app.js` also needs the **field alias** from `manifest.json`'s `datasetsMapping` to query this app's own dataset mapping via `domo.get`. `COLUMN_TO_ALIAS` bridges the two:
-
-```js
-var DATASET_ALIAS = 'BudgetBlindsData';
-
-var COLUMN_TO_ALIAS = {
-  'Brand': 'Brand',
-  'HFCMasterID': 'HFCMasterID',
-  'FranchiseName': 'Owner',       // manifest alias "Owner" -> real column "FranchiseName"
-  'TerrNum': 'TerrNumName'        // manifest alias "TerrNumName" -> real column "TerrNum"
-};
+```html
+<div class="kpi-card" data-kpi="Revenue" style="--kpi-color:#5FBEA5">
+  ...
+  <div class="kpi-value" data-mtd-value>$128,400</div>
+  <div class="kpi-delta up" data-mtd-delta>...</div>
+  ...
+  <span class="kpi-ytd-value" data-ytd-value>$942,100</span>
+  <span class="kpi-ytd-delta up" data-ytd-delta>...</span>
+</div>
 ```
 
-On load, `loadDropdownOptionsFromDomo()` runs one `domo.get('/data/v1/BudgetBlindsData?fields=<alias>&groupby=<alias>')` per dropdown, keeps the existing "All ..." item, and appends the real distinct values as new `.dropdown-item` elements.
+- `data-kpi` matches an `id` in `app.js`'s `KPI_DEFS` array
+- `--kpi-color` (inline style) tints that card's icon chip and top accent bar — independent of the metric it represents, so palette changes are a one-line edit per card
+- `data-mtd-value` / `data-mtd-delta` / `data-ytd-value` / `data-ytd-delta` are the four spans `app.js` overwrites once real numbers load
 
-Selecting an item calls:
-
-```js
-domo.filterContainer([{
-  column: column,               // the raw column, e.g. "FranchiseName"
-  operator: 'IN',
-  values: isAllOption ? [] : [item.textContent],
-  dataType: 'STRING'
-}]);
-```
-
-`domo.filterContainer()` pushes a page-level filter that Domo applies to every *other* card on the page — same mechanism a native filter card uses. Your other charts/KPI cards don't need to live inside this app; they just need to be built on a dataset containing the filtered column (ideally `BudgetBlindsData` itself, or one related to it).
-
-Reporting Period does the same thing with a `BETWEEN` filter on the date column:
+`app.js`'s `KPI_DEFS` is the single source of truth for what each card aggregates:
 
 ```js
-var DATE_COLUMN = 'dt';
+var KPI_DEFS = [
+  { id: 'Revenue',    column: 'Revenue',    agg: 'sum', format: 'currency' },
+  { id: 'CloseRate',  column: 'CloseRate',  agg: 'avg', format: 'percent'  },
+  // ...
+];
 ```
 
-MTD/QTD/YTD compute their range from today's date each time they're clicked; Custom waits until both From/To are filled in. The default MTD range is also pushed once on page load, so cards are filtered correctly before the user touches anything.
+- `column` — the raw dataset column this KPI aggregates (**placeholder names — see below**)
+- `agg` — `'sum'` for totals (Revenue, Leads), `'avg'` for rates/averages (Close Rate, Avg Ticket)
+- `format` — `'currency'`, `'percent'`, or `'number'`, controls both the headline formatting and how deltas read (percent-format KPIs show a **point** difference, e.g. "2.2 pts", instead of a percent-of-a-percent)
 
-**Compare** has no dataset column — it's not something `filterContainer` can express (it's a display mode like "vs. Prior Period", not a row filter). Selecting an item stores `window.currentCompareMode` and dispatches a `compareChange` event instead:
+On load, `loadKpisFromDomo()` runs a single query:
 
-```js
-document.addEventListener('compareChange', function (e) {
-  console.log('Compare mode is now', e.detail.mode);
-  // hook your own comparison logic here
-});
+```
+/data/v1/BudgetBlindsData?fields=dt,Revenue,Leads,JobsBooked,CloseRate,AvgTicket,MarketingSpend&limit=100000
 ```
 
-## Why you might still be seeing sample data
+and computes all four date windows client-side per KPI:
 
-- **Most likely:** you're looking at Dev Studio's built-in code-editor preview. That preview always shows generic sample rows, regardless of `manifest.json`, until this app is added as an actual **card** on a real page and that card instance goes through its own *Select Dataset → confirm field mapping → Save & Finish* step.
-- **If you've done that and it's still wrong:** open the browser console. `loadDropdownOptionsFromDomo()` logs `Failed to load options for <column> from <query>` on any `domo.get` error.
-- **If you're seeing the static placeholders** ("Two Maids", "Owner A", "1001", "West"/"Midwest"/"Southeast") specifically — that means `domo` was undefined when the page loaded, so `loadDropdownOptionsFromDomo()` never ran at all. That points to not running inside a real Domo runtime (file opened directly, or previewed somewhere that doesn't inject `domo.js`), which is a different problem than Domo's own sample-data preview.
+| Window | Range |
+|---|---|
+| MTD | 1st of this month → today |
+| MTD prior | 1st of last month → same day-of-month last month |
+| YTD | Jan 1 this year → today |
+| YTD prior | Jan 1 last year → same month/day last year |
+
+## Placeholder columns — update before publishing
+
+`Revenue`, `Leads`, `JobsBooked`, `CloseRate`, `AvgTicket`, and `MarketingSpend` in `KPI_DEFS` (`app.js`) and in `manifest.json`'s `datasetsMapping[0].fields` are **placeholder column names**. Confirm the real column names against **Resources → Datasets → schema** in the App Code editor (same process the nav bar README documents) and update both files to match — otherwise every card renders `—` (no matching numeric column).
 
 ## The manifest.json
 
-Domo custom apps (Dev Studio / App Framework apps, published with the `ryuu`/`domo` CLI) require a `manifest.json` at the project root.
+Same App Code conventions as the nav bar app — see that app's README for the full Brick-vs-App-Code writeup. Short version: `manifest.json` is required at the project root, `id` is assigned by Domo on first publish (left blank here), and `datasetsMapping` lists the dataset(s) queried via `domo.get`, keyed by `alias`, with a `fields` array of `{alias, columnName}` pairs.
 
-- **id** — assigned by Domo the first time the app is created/published; don't hand-edit it.
-- **name / version** — how the app design shows up in Domo.
-- **size** — the default width/height (in grid units) used for local dev preview and as the card's starting size.
-- **datasetsMapping** — the dataset(s) the app queries via `domo.get`, keyed by `alias`, with a `fields` array of `{alias, columnName}` pairs (see above).
+Code goes directly into Domo's built-in editor, not through the `ryuu`/`domo` CLI — paste in the current contents of `index.html`, `styles.css`, `app.js`, and `manifest.json` when updating, then confirm the card's dataset binding still points at the right dataset.
 
-### Publishing this app to Domo
+## Optional: reacting to the nav bar's filters
 
-This started as a **DDX Brick** but was migrated to a full **App Code** custom app (Domo will actively tell you to do this once a Brick tries to do page-wide things like `filterContainer` — Bricks are meant to be fixed, self-contained visualization components, not general nav/filter bars). The two runtimes differ in a way that matters for this code:
-
-| | DDX Brick | App Code |
-|---|---|---|
-| `domo.js` | Auto-injected as `window.domo`; an explicit `<script src="domo.js">` tag 404s | Loaded for real via `<script src="domo.js"></script>` in `index.html` |
-| dataset alias | Auto-injected as `window.datasets` (array, order matches manifest mapping) | Not auto-injected, and Domo's editor flags any top-level `var datasets = [...]` as "looks migrated from a Brick" (top-level `var` becomes `window.datasets` either way) — so `app.js` just hardcodes `var DATASET_ALIAS = 'BudgetBlindsData';` instead of naming a `datasets` variable at all |
-
-`index.html` and `app.js` in this repo are set up for **App Code** (the script tag is present; the dataset alias is hardcoded rather than read off a `datasets` variable). If you ever go back to a Brick, the script tag needs to come back out and the alias would come from `window.datasets[0]` instead.
-
-The alias/column mapping is confirmed directly against **Resources → Datasets → schema** in the App Code editor: Dataset ID `f708d305-0238-4727-9fa1-80e7efa4d7d8`, alias `BudgetBlindsData`, columns `Brand→Brand`, `HFCMasterID→HFCMasterID`, `FranchiseName→Owner`, `TerrNum→TerrNumName` — matching `manifest.json` exactly, with live preview rows confirming the connection is real (not sample data).
-
-Code still goes directly into Domo's built-in editor, not through the `ryuu`/`domo` CLI — paste in the current contents of `index.html`, `styles.css`, `app.js`, and `manifest.json` when updating.
-
-After pasting updated code in, confirm the card's dataset binding still points at `BudgetBlindsData` and re-check the browser console for the diagnostics described above. One thing worth double-checking on your end: the dataset-mapping key in `manifest.json` was `datasetsMapping` under the Brick — App Code's manifest schema may expect a different key (older Domo custom-app docs use `mapping`). If the App Code editor shows/regenerates a different manifest shape than what's in this repo, treat its version as the source of truth and let me know what it looks like so I can update this file to match.
+If this app is placed on the same page as **Claude Nav**, its Reporting Period / Brand / Owner / Territory dropdowns push page-level filters via `domo.filterContainer()`. This app listens for that with `domo.onFilterUpdate()` (guarded as a no-op if the App Framework build doesn't expose it) and simply re-runs `loadKpisFromDomo()` — Domo re-scopes the `domo.get` query to the active filters automatically, so no extra wiring is needed here.
 
 ## Re-theming
 
-All colors live as CSS custom properties at the top of `styles.css` (`--bar-bg`, `--accent`, etc.), so swapping the seafoam accent or gray tone is a one-line change per variable.
+All shared tokens (background, border, text, seafoam accent) live as CSS custom properties at the top of `styles.css`. Per-card accent colors are set inline via `--kpi-color` on each `.kpi-card` in `index.html`, so recoloring one KPI is a one-line change.
 
 ## Extending
 
-- **More dataset-driven filters:** add a field to `datasetsMapping[0].fields` in `manifest.json`, add a matching `data-dropdown data-column="..."` block to `index.html`, and add an entry to `COLUMN_TO_ALIAS` in `app.js`.
-- **A different operator than `IN`/`EQUALS`:** edit the `domo.filterContainer([...])` call inside `wireDropdownItems()`.
+- **More/fewer KPIs:** add or remove an entry in `KPI_DEFS` (`app.js`) and a matching `.kpi-card` block in `index.html`. The grid (`.kpi-row` in `styles.css`) is `repeat(6, ...)` by default — drop it to `repeat(4, ...)` / `repeat(5, ...)` if you're not using all 6 slots and want them full-width instead of leaving gaps.
+- **A different comparison window** (e.g. WTD, QTD-vs-prior-quarter): add a case to `getDateRanges()` in `app.js` and a second delta line in the card markup, following the existing MTD/YTD pattern.
