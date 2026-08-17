@@ -86,6 +86,51 @@ function saveNavState() {
 }
 
 // ============================================
+// PUSH GUARD — stops the restore-reload-restore loop
+// The persisted-state restore above calls domo.filterContainer() on
+// every load so a reload reproduces the right selection. But if
+// pushing a filter is itself what triggers this app's reload (the
+// same mechanism behind the original reset bug), restoring
+// unconditionally on every load re-pushes the *same* filter every
+// time the app reloads — which can retrigger another reload, which
+// restores and pushes again, and so on: the page keeps refreshing and
+// the numbers keep blinking.
+//
+// sessionStorage (not localStorage — this only needs to survive this
+// app's own reloads within one browser tab, not persist across visits)
+// remembers the last value actually pushed for each filter. Restoring
+// a value that's already marked as pushed updates this app's own UI
+// but skips the domo.filterContainer() call, since the page is
+// already showing that filter — breaking the loop. An actual user
+// selection always pushes and re-marks, regardless of this guard.
+// ============================================
+var PUSH_GUARD_KEY = 'claudeNav.pushed.v1';
+
+function loadPushGuard() {
+  try {
+    return JSON.parse(sessionStorage.getItem(PUSH_GUARD_KEY)) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+var pushGuard = loadPushGuard();
+
+function wasAlreadyPushed(key, value) {
+  return pushGuard[key] === value;
+}
+
+function markPushed(key, value) {
+  pushGuard[key] = value;
+  try {
+    sessionStorage.setItem(PUSH_GUARD_KEY, JSON.stringify(pushGuard));
+  } catch (e) {
+    // Loop-breaking is best-effort if sessionStorage is unavailable —
+    // worst case this reverts to the pre-guard reload behavior.
+  }
+}
+
+// ============================================
 // DROPDOWN BEHAVIOR
 // Native <select> elements, not a custom-built menu — this app runs
 // in an iframe sized to its Domo card, and a position:absolute menu
@@ -141,12 +186,17 @@ function handleSelectChange(select, column) {
   // all, so referencing it unconditionally throws.
   if (typeof domo === 'undefined') return;
 
+  // An actual user selection always pushes, even if it happens to
+  // match the last-pushed value (e.g. re-picking the same option) —
+  // only the restore-on-load path (restoreSelectSelection) skips a
+  // redundant push.
   domo.filterContainer([{
     column: column,
     operator: 'IN',
     values: isAllOption ? [] : [value],
     dataType: 'STRING'
   }]);
+  markPushed('dropdown:' + column, value);
 }
 
 // Re-applies whatever was last selected for this select (persisted in
@@ -174,12 +224,20 @@ function restoreSelectSelection(select, column) {
   }
 
   if (typeof domo === 'undefined') return;
+
+  // The loop-breaking check: skip the push entirely if this exact
+  // value was the last thing this app pushed for this column — the
+  // page is presumably already showing it, so re-pushing would just
+  // risk retriggering another reload for no filter change at all.
+  if (wasAlreadyPushed('dropdown:' + column, saved)) return;
+
   domo.filterContainer([{
     column: column,
     operator: 'IN',
     values: saved === '' ? [] : [saved],
     dataType: 'STRING'
   }]);
+  markPushed('dropdown:' + column, saved);
 }
 
 document.querySelectorAll('[data-dropdown]').forEach(wireSelect);
@@ -259,14 +317,22 @@ function getRange(period) {
   return [toISODate(start), toISODate(now)];
 }
 
-function applyDateFilter(startStr, endStr) {
+// `force` = true always pushes (an actual user action). `force` =
+// false is the restore-on-load path — skips the push (and the reload
+// it can retrigger) if this exact range was the last thing pushed,
+// same loop-breaking logic as the dropdowns above.
+function applyDateFilter(startStr, endStr, force) {
   if (typeof domo === 'undefined') return;
+  var value = startStr + '..' + endStr;
+  if (!force && wasAlreadyPushed('period', value)) return;
+
   domo.filterContainer([{
     column: DATE_COLUMN,
     operator: 'BETWEEN',
     values: [startStr, endStr],
     dataType: 'DATE'
   }]);
+  markPushed('period', value);
 }
 
 // Marks the correct segmented-control button active and pushes the
@@ -291,11 +357,11 @@ function selectPeriod(periodKey, persist) {
     // Wait for the user to actually pick dates rather than filtering
     // on empty/partial values — unless a prior Custom selection is
     // being restored and both dates are already filled in below.
-    if (fromDate.value && toDate.value) applyDateFilter(fromDate.value, toDate.value);
+    if (fromDate.value && toDate.value) applyDateFilter(fromDate.value, toDate.value, persist);
     return;
   }
   var range = getRange(periodKey);
-  applyDateFilter(range[0], range[1]);
+  applyDateFilter(range[0], range[1], persist);
 }
 
 document.querySelectorAll('[data-period]').forEach(function (btn) {
@@ -312,7 +378,7 @@ document.querySelectorAll('[data-period]').forEach(function (btn) {
       navState.customFrom = fromDate.value;
       navState.customTo = toDate.value;
       saveNavState();
-      applyDateFilter(fromDate.value, toDate.value);
+      applyDateFilter(fromDate.value, toDate.value, true);
     }
   });
 });
