@@ -25,7 +25,7 @@ var DIMENSION_COLUMNS = ['Brand', 'HFCMasterID', 'FranchiseName', 'TerrNum'];
 // reachable from this app's domo.get call directly — see README —
 // so the same math has to be re-expressed here):
 //
-// 1. Simple column: { column, agg } — 'sum' for totals (Revenue,
+// 1. Simple column: { column, agg } — 'sum' for totals (Order Amount,
 //    Leads), 'avg' for a plain row-average.
 // 2. Beast-Mode-style formula: { compute } — a function that takes
 //    the already-date-filtered rows for one window (MTD, MTD-prior,
@@ -43,7 +43,7 @@ var DIMENSION_COLUMNS = ['Brand', 'HFCMasterID', 'FranchiseName', 'TerrNum'];
 // data-mtd-delta/data-ytd-value/data-ytd-delta spans).
 //
 // All 6 below are now real Beast Modes, forming one funnel: Leads ->
-// Proposals -> Orders -> Revenue, plus AOV and Close Rate as derived
+// Proposals -> Orders -> Order Amount, plus AOV and Close Rate as derived
 // ratios of the funnel stages. None of them read `Reporting Period
 // Flag` / `HFC Period`-style Domo Variables — those are how the
 // production Beast Modes get their date window from the page's native
@@ -52,13 +52,18 @@ var DIMENSION_COLUMNS = ['Brand', 'HFCMasterID', 'FranchiseName', 'TerrNum'];
 // that job instead, so any such condition is dropped when porting.
 // ============================================
 var KPI_DEFS = [
-  // SUM(CASE WHEN Type='Revenue' THEN LineValue END)
+  // "Order Amount": SUM(CASE WHEN Type='Orders' AND order_Wo IS NOT NULL
+  //   AND Category<>'Spend' THEN LineValue END)
   {
-    id: 'Revenue',
-    columns: ['Type', 'LineValue'],
+    id: 'OrderAmount',
+    columns: ['Type', 'order_Wo', 'Category', 'LineValue'],
     format: 'currency',
     filterRows: function (rows) {
-      return rows.filter(function (r) { return r.Type === 'Revenue'; });
+      return rows.filter(function (r) {
+        return r.Type === 'Orders' &&
+          r.order_Wo !== null && r.order_Wo !== undefined &&
+          r.Category !== 'Spend';
+      });
     },
     column: 'LineValue',
     agg: 'sum'
@@ -137,10 +142,10 @@ var KPI_DEFS = [
     }
   },
 
-  // AOV = Orders (Revenue) Sum / Orders Count — two different subsets
-  // of the same rows (Type='Revenue' rows summed, Type='Orders' rows
-  // counted distinct), so this reuses REVENUE_DEF/ORDERS_DEF's own
-  // filterRows rather than taking one of its own.
+  // AOV = Order Amount Sum / Orders Count — same Type='Orders'/order_Wo
+  // NOT NULL/Category<>'Spend' row subset for both, just summed vs.
+  // deduped-and-counted. Reuses OrderAmount/ORDERS_DEF's own filterRows
+  // rather than taking one of its own.
   {
     id: 'AOV',
     columns: ['Type', 'LineValue', 'order_Wo', 'Category', 'OrganizationID', 'OwnerNumber'],
@@ -148,8 +153,8 @@ var KPI_DEFS = [
     compute: function (rows) {
       var orderCount = distinctCount(ORDERS_DEF.filterRows(rows), ORDERS_DEF.distinctKey);
       if (orderCount === 0) return null;
-      var revenue = sumCol(REVENUE_DEF.filterRows(rows), 'LineValue');
-      return revenue / orderCount;
+      var orderAmount = sumCol(ORDER_AMOUNT_DEF.filterRows(rows), 'LineValue');
+      return orderAmount / orderCount;
     }
   },
 
@@ -173,9 +178,9 @@ var KPI_DEFS = [
 ];
 
 // Reused above so AOV/CloseRate count "a lead"/"an order"/"revenue"
-// the exact same way the Leads/Orders/Revenue cards do, instead of
+// the exact same way the Leads/Orders/Order Amount cards do, instead of
 // duplicating each filter/dedup definition.
-var REVENUE_DEF = KPI_DEFS.filter(function (d) { return d.id === 'Revenue'; })[0];
+var ORDER_AMOUNT_DEF = KPI_DEFS.filter(function (d) { return d.id === 'OrderAmount'; })[0];
 var LEADS_DEF = KPI_DEFS.filter(function (d) { return d.id === 'Leads'; })[0];
 var ORDERS_DEF = KPI_DEFS.filter(function (d) { return d.id === 'Orders'; })[0];
 

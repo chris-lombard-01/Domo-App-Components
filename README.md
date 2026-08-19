@@ -2,7 +2,7 @@
 
 A drop-in row of 4-6 KPI cards for a Domo custom app, each showing an **MTD value with vs-last-month delta** and a **YTD value with vs-last-year delta**, wired directly to the `BudgetBlindsData` dataset. Built to sit on the same page as the companion **Claude Nav** app (same seafoam theme, same App Code conventions).
 
-- 6 cards in a single row — a full funnel: Leads → Proposals → Orders → Revenue, plus AOV and Close Rate — wrapping to 3 / 2 / 1 across as the page narrows
+- 6 cards in a single row — a full funnel: Leads → Proposals → Orders → Order Amount, plus AOV and Close Rate — wrapping to 3 / 2 / 1 across as the page narrows
 - Each card gets its own accent color as a top bar + tinted icon chip, so a metric is identifiable before you've read the title
 - Big MTD number with a green/red delta pill vs. the same number of days last month
 - Smaller YTD line below a divider, with its own delta vs. the same Jan 1-to-date window last year
@@ -26,7 +26,7 @@ Open `index.html` in a browser (or `python3 -m http.server` from this folder). O
 Each card in `index.html` is a `.kpi-card` with:
 
 ```html
-<div class="kpi-card" data-kpi="Revenue" style="--kpi-color:#5FBEA5">
+<div class="kpi-card" data-kpi="OrderAmount" style="--kpi-color:#5FBEA5">
   ...
   <div class="kpi-value" data-mtd-value>$128,400</div>
   <div class="kpi-delta up" data-mtd-delta>...</div>
@@ -68,7 +68,7 @@ Example (Proposals, a `COUNT(DISTINCT ...)`):
 }
 ```
 
-A KPI that's a ratio between two *different* row subsets (AOV, Close Rate) skips its own `filterRows` and instead calls another KPI def's `filterRows`/`distinctKey` directly inside `compute` — see `AOV` and `CloseRate` in `app.js`, which reuse `REVENUE_DEF`/`ORDERS_DEF`/`LEADS_DEF` this way rather than duplicating each definition.
+A KPI that's a ratio between two *different* row subsets (AOV, Close Rate) skips its own `filterRows` and instead calls another KPI def's `filterRows`/`distinctKey` directly inside `compute` — see `AOV` and `CloseRate` in `app.js`, which reuse `ORDER_AMOUNT_DEF`/`ORDERS_DEF`/`LEADS_DEF` this way rather than duplicating each definition.
 
 ### Why formulas, not just columns — and why this can't call a saved Beast Mode directly
 
@@ -99,18 +99,18 @@ This app intentionally does **not** react to the nav bar's period selector — M
 
 ## Real Beast Modes ported so far
 
-The row is now a full funnel — **Leads → Proposals → Orders → Revenue**, plus **AOV** and **Close Rate** as derived ratios — and every card is a real formula, not a placeholder:
+The row is now a full funnel — **Leads → Proposals → Orders → Order Amount**, plus **AOV** and **Close Rate** as derived ratios — and every card is a real formula, not a placeholder:
 
 | Card | Ported from |
 |---|---|
 | **Leads** | `COUNT(DISTINCT CASE WHEN Type='Leads' AND Category<>'Spend' AND dt<CURRENT_DATE() THEN CONCAT(OrganizationID, LeadID, MONTH(dt), YEAR(dt)) END)` |
 | **Proposals** | `COUNT(DISTINCT CASE WHEN Type='Quotes' AND quote_Number IS NOT NULL AND project_PrimaryQuote=1 AND Category<>'Spend' THEN CONCAT(OrganizationID, OwnerNumber, quote_Number) END)` |
 | **Orders** | "Order Count": `COUNT(DISTINCT CASE WHEN Reporting Period Flag=1 AND Type='Orders' AND order_Wo IS NOT NULL AND Category<>'Spend' THEN CONCAT(OrganizationID, OwnerNumber, order_Wo) END)` |
-| **Revenue** | `SUM(CASE WHEN Type='Revenue' THEN LineValue END)` |
-| **AOV** | "Orders Sum / Orders Count" — Revenue's formula above, divided by Orders' distinct count |
+| **Order Amount** | `SUM(CASE WHEN Type='Orders' AND order_Wo IS NOT NULL AND Category<>'Spend' THEN LineValue END)` |
+| **AOV** | "Order Amount Sum / Orders Count" — Order Amount's formula above, divided by Orders' distinct count |
 | **Close Rate** | Not a provided Beast Mode — this app's own placeholder ratio, Orders / Leads, now built from the two real distinct-count formulas above instead of a fabricated column |
 
-This confirmed `BudgetBlindsData` is transaction-level (`Type`/`Category` per row, e.g. `Type` taking values like `Leads`/`Quotes`/`Orders`/`Revenue`), which is why every card uses `filterRows`/`distinctKey` instead of reading a dedicated numeric column.
+This confirmed `BudgetBlindsData` is transaction-level (`Type`/`Category` per row, e.g. `Type` taking values like `Leads`/`Quotes`/`Orders`), which is why every card uses `filterRows`/`distinctKey` instead of reading a dedicated numeric column.
 
 Two things dropped in translation, both intentionally:
 
