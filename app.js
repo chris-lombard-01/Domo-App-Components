@@ -17,7 +17,7 @@ var DATE_COLUMN = 'dt';
 // filtered by Domo automatically just because another card on the
 // page called domo.filterContainer(), so this app has to apply that
 // filter itself.
-var DIMENSION_COLUMNS = ['Brand', 'HFCMasterID', 'FranchiseName', 'TerrNum'];
+var DIMENSION_COLUMNS = ['Brand', 'HFCMasterID', 'OwnerNumber', 'TerrNum'];
 
 // ============================================
 // KPI DEFINITIONS
@@ -464,10 +464,15 @@ document.addEventListener('keydown', function (e) {
 // domo.filterContainer() call looks like, e.g.
 //   [{ column: 'Brand', operator: 'IN', values: ['Two Maids'], dataType: 'STRING' }]
 // An empty `values` array means "All ..." was selected for that
-// column, i.e. no restriction. The nav bar's Reporting Period BETWEEN
-// filter on `dt` is deliberately ignored here — see the Drill-down
-// section of the README for why this app keeps its own fixed MTD/YTD
-// windows instead of following the page's period selector.
+// column, i.e. no restriction. Any date/period filter from the nav
+// bar — its Reporting Period BETWEEN on `dt`, or any other date/period
+// column it might push — is deliberately ignored here: the handler
+// below only keeps filters whose column is in DIMENSION_COLUMNS
+// (an allowlist, not just "not dt"), so this app's own fixed MTD/YTD
+// windows are never overridden by the page's period selector no matter
+// what column name or operator that selector actually uses. See the
+// Drill-down section of the README for why this app keeps its own
+// fixed windows instead of following the page's period selector.
 // ============================================
 var activeDimensionFilters = [];
 
@@ -522,16 +527,22 @@ if (typeof domo !== 'undefined') {
   // domo.onFilterUpdate fires whenever any card on the page (the nav
   // bar included) calls domo.filterContainer(). Re-renders from the
   // already-fetched cachedRows — no need to re-fetch, since dimension
-  // filtering happens client-side above. If nothing filters after
-  // pasting this into Domo, check the console: this logs the raw
-  // filter payload every time it fires, which is the fastest way to
-  // confirm (a) the hook is firing at all and (b) its shape matches
-  // what applyDimensionFilters() expects (column/operator/values).
+  // filtering happens client-side above. Kept filters are allowlisted
+  // to DIMENSION_COLUMNS (Brand/HFCMasterID/OwnerNumber/TerrNum) with
+  // an IN operator — anything else, including any date/period filter
+  // the nav bar pushes (whatever column name or operator it actually
+  // uses), is dropped here rather than merely excluding a literal `dt`
+  // column, so this app's own MTD/YTD windows can never be overridden.
+  // If nothing filters after pasting this into Domo, check the
+  // console: this logs the raw filter payload every time it fires,
+  // which is the fastest way to confirm (a) the hook is firing at all
+  // and (b) its shape matches what applyDimensionFilters() expects
+  // (column/operator/values).
   if (typeof domo.onFilterUpdate === 'function') {
     domo.onFilterUpdate(function (filters) {
       console.log('KPI row received filter update:', filters);
       activeDimensionFilters = (filters || []).filter(function (f) {
-        return f.column !== DATE_COLUMN && f.operator === 'IN';
+        return DIMENSION_COLUMNS.indexOf(f.column) !== -1 && f.operator === 'IN';
       });
       renderAll(cachedRows);
     });

@@ -20,10 +20,6 @@
                "columnName": "HFCMasterID"
             },
             {
-               "alias": "FranchiseName",
-               "columnName": "FranchiseName"
-            },
-            {
                "alias": "TerrNum",
                "columnName": "TerrNum"
             },
