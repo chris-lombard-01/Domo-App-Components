@@ -1,70 +1,71 @@
 {
-   "id": "",
-   "name": "Claude KPI Row",
-   "version": "0.0.1",
-   "datasetsMapping": [
-      {
-         "dataSetId": "f708d305-0238-4727-9fa1-80e7efa4d7d8",
-         "alias": "BudgetBlindsData",
-         "fields": [
-            {
-               "alias": "dt",
-               "columnName": "dt"
-            },
-            {
-               "alias": "Brand",
-               "columnName": "Brand"
-            },
-            {
-               "alias": "HFCMasterID",
-               "columnName": "HFCMasterID"
-            },
-            {
-               "alias": "TerrNum",
-               "columnName": "TerrNum"
-            },
-            {
-               "alias": "Type",
-               "columnName": "Type"
-            },
-            {
-               "alias": "Category",
-               "columnName": "Category"
-            },
-            {
-               "alias": "OrganizationID",
-               "columnName": "OrganizationID"
-            },
-            {
-               "alias": "OwnerNumber",
-               "columnName": "OwnerNumber"
-            },
-            {
-               "alias": "LeadID",
-               "columnName": "LeadID"
-            },
-            {
-               "alias": "LineValue",
-               "columnName": "LineValue"
-            },
-            {
-               "alias": "quote_Number",
-               "columnName": "quote_Number"
-            },
-            {
-               "alias": "project_PrimaryQuote",
-               "columnName": "project_PrimaryQuote"
-            },
-            {
-               "alias": "order_Wo",
-               "columnName": "order_Wo"
-            }
-         ],
-         "dql": null
-      }
-   ],
-   "size": {
-      "width": 12,
-      "height": 3
-   }
+  "id": "fd80e23d-e5bb-48fd-a34b-a3fd893a1c66",
+  "name": "Claude KPI Row",
+  "version": "0.0.1",
+  "datasetsMapping": [
+    {
+      "dataSetId": "f708d305-0238-4727-9fa1-80e7efa4d7d8",
+      "alias": "BudgetBlindsData",
+      "fields": [
+        {
+          "alias": "dt",
+          "columnName": "dt"
+        },
+        {
+          "alias": "Brand",
+          "columnName": "Brand"
+        },
+        {
+          "alias": "HFCMasterID",
+          "columnName": "HFCMasterID"
+        },
+        {
+          "alias": "TerrNum",
+          "columnName": "TerrNum"
+        },
+        {
+          "alias": "Type",
+          "columnName": "Type"
+        },
+        {
+          "alias": "Category",
+          "columnName": "Category"
+        },
+        {
+          "alias": "OrganizationID",
+          "columnName": "OrganizationID"
+        },
+        {
+          "alias": "OwnerNumber",
+          "columnName": "OwnerNumber"
+        },
+        {
+          "alias": "LeadID",
+          "columnName": "LeadID"
+        },
+        {
+          "alias": "LineValue",
+          "columnName": "LineValue"
+        },
+        {
+          "alias": "quote_Number",
+          "columnName": "quote_Number"
+        },
+        {
+          "alias": "project_PrimaryQuote",
+          "columnName": "project_PrimaryQuote"
+        },
+        {
+          "alias": "order_Wo",
+          "columnName": "order_Wo"
+        }
+      ],
+      "dql": null
+    }
+  ],
+  "size": {
+    "width": 12,
+    "height": 3
+  },
+  "fileName": "manifest.json"
 }
