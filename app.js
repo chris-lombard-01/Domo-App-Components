@@ -392,7 +392,7 @@ document.addEventListener('keydown', function (e) {
 // DIMENSION FILTERING
 // Brand/HFCMasterID/OwnerNumber/TerrNum selections in the nav bar
 // arrive here as domo.filterContainer() payloads via
-// domo.onFilterUpdate (below) — NOT as an automatically-filtered
+// domo.onFiltersUpdate (below) — NOT as an automatically-filtered
 // query. Unlike the old client-side-cache version of this app, there's
 // no in-memory row set to re-filter anymore: a dimension change means
 // re-running all four SQL queries with an updated WHERE clause
@@ -433,7 +433,7 @@ function dimensionWhereClause() {
 if (typeof domo !== 'undefined') {
   renderAll();
 
-  // domo.onFilterUpdate fires whenever any card on the page (the nav
+  // domo.onFiltersUpdate fires whenever any card on the page (the nav
   // bar included) calls domo.filterContainer(). Re-runs all four
   // queries with the updated dimension WHERE clause — see DIMENSION
   // FILTERING above for why there's no cached row set to re-filter in
@@ -442,8 +442,8 @@ if (typeof domo !== 'undefined') {
   // fires, which is the fastest way to confirm (a) the hook is firing
   // at all and (b) its shape matches what dimensionWhereClause()
   // expects (column/operator/values).
-  if (typeof domo.onFilterUpdate === 'function') {
-    domo.onFilterUpdate(function (filters) {
+  if (typeof domo.onFiltersUpdate === 'function') {
+    domo.onFiltersUpdate(function (filters) {
       console.log('KPI row received filter update:', filters);
       activeDimensionFilters = (filters || []).filter(function (f) {
         return DIMENSION_COLUMNS.indexOf(f.column) !== -1 && f.operator === 'IN';
@@ -451,6 +451,6 @@ if (typeof domo !== 'undefined') {
       renderAll();
     });
   } else {
-    console.warn('domo.onFilterUpdate is not available in this App Framework build — dimension filters from the nav bar will not reach this app.');
+    console.warn('domo.onFiltersUpdate is not available in this App Framework build — dimension filters from the nav bar will not reach this app.');
   }
 }
