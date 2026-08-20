@@ -112,11 +112,17 @@ function buildKpiSql(def, ranges, dimensionWhere) {
   var windowKeys = ['mtd', 'mtdPrior', 'ytd', 'ytdPrior'];
   var selects = windowKeys.map(function (key) {
     return sqlMetric(def, sqlDateWindow(ranges[key])) + ' AS ' + key;
-  }).join(',\n  ');
+  }).join(', ');
 
   var where = def.where + (dimensionWhere ? ' AND ' + dimensionWhere : '');
 
-  return 'SELECT\n  ' + selects + '\nFROM table\nWHERE ' + where;
+  // Single-line on purpose: the per-app /sql/v1/{alias} proxy this
+  // runs through (domo.post below) 500s on a SQL body containing
+  // newlines, even though the exact same multi-line SQL succeeds
+  // against Domo's general Dataset Query API — confirmed by bisecting
+  // a failing query down to newlines as the only variable. No other
+  // part of the SQL (CASE/CONCAT/COUNT DISTINCT/etc.) was the problem.
+  return 'SELECT ' + selects + ' FROM table WHERE ' + where;
 }
 
 // ============================================
