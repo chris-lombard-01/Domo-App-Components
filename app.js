@@ -181,16 +181,19 @@ function numberOrZero(value) {
 
 function runKpiQuery(def, ranges, dimensionWhere) {
   var sql = buildKpiSql(def, ranges, dimensionWhere);
+  console.log('KPI SQL for ' + def.id + ': ' + sql);
 
   return domo.post('/sql/v1/' + DATASET_ALIAS, sql, { contentType: 'text/plain' })
     .then(function (result) {
       var row = firstRowAsObject(result);
-      return {
+      var values = {
         mtd: numberOrZero(pick(row, 'mtd')),
         mtdPrior: numberOrZero(pick(row, 'mtdPrior')),
         ytd: numberOrZero(pick(row, 'ytd')),
         ytdPrior: numberOrZero(pick(row, 'ytdPrior'))
       };
+      console.log('KPI result for ' + def.id + ': ' + JSON.stringify(values));
+      return values;
     })
     .catch(function (err) {
       console.error('KPI query failed for ' + def.id + ':\n' + sql, err);
@@ -334,6 +337,7 @@ function renderKpi(id, format, values) {
 function renderAll() {
   var ranges = getDateRanges();
   var dimensionWhere = dimensionWhereClause();
+  console.log('KPI dimensionWhere: ' + JSON.stringify(dimensionWhere) + ' (from activeDimensionFilters: ' + JSON.stringify(activeDimensionFilters) + ')');
 
   var queries = KPI_DEFS.map(function (def) {
     return runKpiQuery(def, ranges, dimensionWhere).then(function (values) {
@@ -452,9 +456,19 @@ if (typeof domo !== 'undefined') {
   // expects (column/operator/values).
   if (typeof domo.onFiltersUpdate === 'function') {
     domo.onFiltersUpdate(function (filters) {
-      console.log('KPI row received filter update:', filters);
+      console.log('KPI row received filter update: ' + JSON.stringify(filters));
       activeDimensionFilters = (filters || []).filter(function (f) {
-        return DIMENSION_COLUMNS.indexOf(f.column) !== -1 && f.operator === 'IN';
+        // The payload delivered here uses `operand`, not `operator`
+        // (confirmed live: {column:'HFCMasterID', operand:'IN',
+        // values:[...]}) — Claude Nav's own domo.filterContainer() call
+        // sends `operator`, so this App Studio build evidently renames
+        // it (along with lowercasing dataType and adding dataSourceId/
+        // aggregated/sourceCardURN/persist/label/alias) somewhere
+        // between push and delivery. Checking both keys is cheap
+        // insurance against that renaming being inconsistent across
+        // filter sources.
+        return DIMENSION_COLUMNS.indexOf(f.column) !== -1 &&
+          (f.operand === 'IN' || f.operator === 'IN');
       });
       renderAll();
     });
