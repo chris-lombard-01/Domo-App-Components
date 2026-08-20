@@ -24,7 +24,15 @@ var DATE_COLUMN = 'dt';
 // The nav bar's exact data-column values — the SQL WHERE clause built
 // below is scoped to whichever of these the nav bar has selected (see
 // DIMENSION FILTERING below).
-var DIMENSION_COLUMNS = ['Brand', 'HFCMasterID', 'OwnerNumber', 'TerrNum'];
+// Confirmed directly against Claude Nav's own source (`domo download`)
+// — its dropdowns push exactly these four data-column values via
+// domo.filterContainer([{column, operator:'IN', values:[...],
+// dataType:'STRING'}]). OwnerNumber is NOT one of them — that was a
+// wrong guess in an earlier pass (OwnerNumber happens to also be a
+// real column used by other KPIs' own distinct-count formulas above,
+// which made it a plausible-looking but incorrect substitute for
+// FranchiseName).
+var DIMENSION_COLUMNS = ['Brand', 'HFCMasterID', 'FranchiseName', 'TerrNum'];
 
 // ============================================
 // KPI DEFINITIONS
