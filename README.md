@@ -84,11 +84,13 @@ On load, `loadKpisFromDomo()` runs a single query for the union of every KPI's `
 
 and computes all four date windows client-side per KPI:
 
+Every window below is anchored on **yesterday**, not today — the dataset is only ever loaded through yesterday, so ending a window on today would tack on a same-day zero and skew every delta against a complete prior period. Computed via date-component arithmetic (not a raw ms subtraction) so it still lands correctly across a month/year rollover, e.g. if today is Sep 1 but data only goes through Aug 31, MTD correctly stays anchored to August rather than a same-day sliver of September.
+
 | Window | Range |
 |---|---|
-| MTD | 1st of this month → today |
+| MTD | 1st of this month → yesterday |
 | MTD prior | 1st of last month → same day-of-month last month |
-| YTD | Jan 1 this year → today |
+| YTD | Jan 1 this year → yesterday |
 | YTD prior | Jan 1 last year → same month/day last year |
 
 ## Drill-down

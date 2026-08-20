@@ -223,16 +223,28 @@ function formatDelta(current, prior, format, suffix) {
 
 // ============================================
 // DATE RANGES
-// MTD compares this month-so-far against the same number of days at
-// the start of last month. YTD compares Jan 1-to-today against the
-// same Jan 1-to-same-date window last year.
+// Data is only ever loaded through yesterday, so every window below is
+// anchored on yesterday, not today (see the `now` reassignment in
+// getDateRanges) — otherwise MTD/YTD would tack on a same-day zero and
+// every vs-last-month/vs-last-year delta would compare a partial
+// "today" against a complete prior day. MTD compares this
+// month-through-yesterday against the same number of days at the start
+// of last month. YTD compares Jan 1-through-yesterday against the same
+// Jan 1-to-same-date window last year.
 // ============================================
 function toISODate(d) {
   return d.toISOString().slice(0, 10);
 }
 
 function getDateRanges() {
-  var now = new Date();
+  // today - 1, via date-component arithmetic (not a raw ms subtraction)
+  // so it still lands correctly across a month/year rollover — e.g. if
+  // today is Sep 1 but data only goes through Aug 31, `now` below
+  // (and therefore mtdStart's month/year) correctly becomes August,
+  // not a same-day sliver of September.
+  var today = new Date();
+  var now = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+
   var mtdStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   var priorMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -289,7 +301,11 @@ function distinctCount(rows, keyFn) {
 
 // Clips a [start, end] range's end to yesterday when a KPI's Beast
 // Mode excludes "today" unconditionally (see the Leads def above).
-// Only ever tightens the range, never widens it.
+// Only ever tightens the range, never widens it. getDateRanges() above
+// already anchors every window on yesterday (data is only ever loaded
+// through yesterday), so in practice this no-ops for every KPI today —
+// kept as an explicit safeguard for Leads' own "dt < CURRENT_DATE()"
+// rule in case the data source ever starts loading same-day rows.
 function clipEndForToday(range, excludeToday) {
   if (!excludeToday) return range;
   var yesterday = new Date();
