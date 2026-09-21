@@ -113,6 +113,14 @@ Planned rebuild: an on-demand SQL `SELECT` when a user actually clicks a number,
 
 The modal markup/CSS (`#drilldownModal` in `index.html`) and the click-handler wiring in `app.js` are left in place since the new-tab version will likely still want the "Filter page to this view" `domo.filterContainer()` behavior — just retargeted to open a table instead of populating the modal.
 
+## Card links and icon tooltips
+
+Each `.kpi-card` in `index.html` carries a `data-href=""` attribute, empty by default. Paste a Domo page URL (or any URL) into it and that whole card — everything except the MTD/YTD number buttons, which stay reserved for the drill-down rebuild above — becomes clickable, taking the user to that page. Leave it empty and the card stays exactly as non-interactive as before; `wireCardLinks()` in `app.js` skips any card whose `data-href` is blank.
+
+Navigation goes through `window.top.location.href`, not a plain `window.location` or an `<a href>`, because this app runs inside an iframe on the Domo page — setting `window.location` here would only navigate this card's own iframe, leaving the rest of the page and the browser's URL bar unchanged. `window.top` is the outermost browsing context, so the click actually takes the user to the target page. Cmd/Ctrl-click or middle-click opens it in a new tab instead (`window.open(href, '_blank')`), same as a normal link.
+
+Each `.kpi-icon` also carries a `data-tooltip="..."` — hovering (or tab-focusing, for keyboard users) shows a small themed bubble below the icon, in `styles.css` via `.kpi-icon[data-tooltip]::after`/`::before`, no JS involved. It opens **below** the icon rather than above on purpose: this app's card has the same clipping constraint documented in the nav bar's README (an iframe's own box clips anything positioned past its edges, no `z-index` fix escapes it), and there's more room below the icon, inside the card's own height, than above it at the very top of the card.
+
 ## Real Beast Modes ported so far
 
 The row is a full funnel — **Leads → Proposals → Orders → Order Amount → Revenue**, plus **AOV** and **Close Rate** as derived ratios — and every card is a real formula, not a placeholder:

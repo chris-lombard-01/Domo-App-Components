@@ -414,6 +414,52 @@ document.addEventListener('keydown', function (e) {
 });
 
 // ============================================
+// CARD LINKS
+// Each .kpi-card can carry a data-href pointing at a Domo page (or
+// any URL) — set it directly in index.html, empty by default so a
+// card stays non-interactive until you add one. Navigation goes
+// through window.top, not window.location, because this app runs
+// inside an iframe on the Domo page: setting window.location here
+// would only navigate this card's own iframe, leaving the rest of
+// the page (and the URL bar) unchanged. window.top is the outermost
+// browsing context, so this actually takes the user to the page.
+//
+// Clicks starting on a [data-drill] button (the MTD/YTD numbers,
+// reserved for the drill-down rebuild above) don't trigger the card
+// link — only the rest of the card (icon, title, delta rows,
+// whitespace) does.
+// ============================================
+function wireCardLinks() {
+  document.querySelectorAll('.kpi-card[data-href]').forEach(function (card) {
+    var href = card.getAttribute('data-href');
+    if (!href) return; // data-href="" — no link configured for this card
+
+    card.classList.add('linked');
+    card.setAttribute('role', 'link');
+    card.setAttribute('tabindex', '0');
+
+    card.addEventListener('click', function (e) {
+      if (e.target.closest('[data-drill]')) return;
+      if (e.metaKey || e.ctrlKey || e.button === 1) {
+        window.open(href, '_blank');
+      } else {
+        window.top.location.href = href;
+      }
+    });
+
+    card.addEventListener('keydown', function (e) {
+      if (e.target.closest('[data-drill]')) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        window.top.location.href = href;
+      }
+    });
+  });
+}
+
+wireCardLinks();
+
+// ============================================
 // DIMENSION FILTERING
 // Brand/HFCMasterID/OwnerNumber/TerrNum selections in the nav bar
 // arrive here as domo.filterContainer() payloads via

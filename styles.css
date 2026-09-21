@@ -62,22 +62,38 @@ body {
   border: 1px solid var(--card-border);
   border-radius: var(--radius);
   padding: 16px 16px 14px;
-  overflow: hidden;
   box-shadow: 0 1px 2px rgba(16, 24, 24, 0.04);
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 
+/* border-radius on ::before itself (rather than overflow:hidden on
+   .kpi-card) matches the card's rounded top corners without clipping
+   the card's own contents — needed so the icon tooltip below can
+   escape the card's box instead of being cut off. */
 .kpi-card::before {
   content: "";
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 3px;
+  border-radius: var(--radius) var(--radius) 0 0;
   background: var(--kpi-color, var(--accent));
 }
 
 .kpi-card:hover {
   box-shadow: 0 6px 18px rgba(16, 24, 24, 0.08);
   transform: translateY(-1px);
+}
+
+/* A card with a real data-href gets pointer affordance; one left at
+   data-href="" (no link configured) stays non-interactive — see
+   index.html/app.js. */
+.kpi-card.linked {
+  cursor: pointer;
+}
+
+.kpi-card.linked:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .kpi-header {
@@ -88,6 +104,7 @@ body {
 }
 
 .kpi-icon {
+  position: relative; /* anchors the tooltip bubble below */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -102,6 +119,66 @@ body {
 .kpi-icon svg {
   width: 15px;
   height: 15px;
+}
+
+/* ============================================
+   ICON TOOLTIP — CSS-only (no JS), themed bubble instead of the
+   plain OS tooltip a native `title` attribute would give. Opens
+   below the icon rather than above: this app lives on a Domo card
+   whose own box can clip anything positioned past its edges (the
+   same constraint that made the nav bar's dropdown menu clip — see
+   that app's README) — below has more room inside a KPI card's own
+   height than above does at the very top of the card.
+   ============================================ */
+.kpi-icon[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 9px);
+  left: 0;
+  width: max-content;
+  max-width: 210px;
+  background: var(--text-main);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 7px 10px;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(16, 24, 24, 0.18);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.kpi-icon[data-tooltip]::before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 9px;
+  border: 5px solid transparent;
+  border-bottom-color: var(--text-main);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.kpi-icon[data-tooltip]:hover::after,
+.kpi-icon[data-tooltip]:hover::before,
+.kpi-icon[data-tooltip]:focus-visible::after,
+.kpi-icon[data-tooltip]:focus-visible::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.kpi-icon:focus-visible {
+  outline: 2px solid var(--kpi-color, var(--accent));
+  outline-offset: 2px;
 }
 
 .kpi-title {
