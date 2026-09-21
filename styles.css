@@ -5,7 +5,6 @@
    when placed on the same Domo page.
    ============================================ */
 :root {
-  --page-bg: #FAFBFB;
   --card-bg: #FFFFFF;
   --card-border: #E7E9EA;
   --text-main: #2E3436;
@@ -22,22 +21,33 @@
 
 * { box-sizing: border-box; }
 
+/* Transparent on purpose — this app is a card sitting on a Domo
+   Studio page, not a standalone page, so it should show the
+   dashboard's own background through it rather than an opaque box
+   of its own. Only the individual .kpi-card tiles get a solid
+   --card-bg; the page/body around them stays see-through. */
 body {
   margin: 0;
   padding: 20px;
-  background: var(--page-bg);
+  background: transparent;
   font-family: var(--font);
 }
 
 /* ============================================
-   KPI ROW — 4-6 cards across, equal width, wraps gracefully
+   KPI ROW
+   auto-fit sizes as many ~150px+ columns as the container's width
+   allows (up to max-width), so this adapts to however many cards are
+   in the row without hand-tuned breakpoints, and wraps on its own as
+   the card narrows. margin: 0 auto centers the row itself within a
+   wider Domo card, instead of sitting flush left.
    ============================================ */
 .kpi-row {
   display: grid;
-  grid-template-columns: repeat(6, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 14px;
   max-width: 1400px;
   width: 100%;
+  margin: 0 auto;
 }
 
 /* ============================================
@@ -231,21 +241,6 @@ body {
 
 .kpi-ytd-delta.up .arrow { border-bottom: 4px solid var(--up); }
 .kpi-ytd-delta.down .arrow { border-top: 4px solid var(--down); }
-
-/* ============================================
-   RESPONSIVE — steps down from 6 across as the card/page narrows
-   ============================================ */
-@media (max-width: 1180px) {
-  .kpi-row { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
-}
-
-@media (max-width: 620px) {
-  .kpi-row { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
-}
-
-@media (max-width: 380px) {
-  .kpi-row { grid-template-columns: 1fr; }
-}
 
 /* ============================================
    DRILL-DOWN MODAL

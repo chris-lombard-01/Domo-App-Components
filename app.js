@@ -36,8 +36,9 @@ var DIMENSION_COLUMNS = ['Brand', 'HFCMasterID', 'FranchiseName', 'TerrNum'];
 
 // ============================================
 // KPI DEFINITIONS
-// Four real, independently-queried KPIs — Leads, Proposals, Orders,
-// Order Amount — each a straight port of its Beast Mode into SQL:
+// Five real, independently-queried KPIs — Leads, Proposals, Orders,
+// Order Amount, Revenue — each a straight port of its Beast Mode into
+// SQL:
 //
 // - `distinctKey`: paired with COUNT(DISTINCT CASE WHEN <window> THEN
 //   <key> END) in the generated SQL — the direct equivalent of a Beast
@@ -87,6 +88,18 @@ var KPI_DEFS = [
     id: 'OrderAmount',
     format: 'currency',
     where: "Type = 'Orders' AND order_Wo IS NOT NULL AND Category <> 'Spend'",
+    sumColumn: 'LineValue'
+  },
+
+  // "Revenue": SUM(CASE WHEN Type='Revenue' AND <window> THEN
+  //   LineValue END). Distinct from Order Amount above — Order Amount
+  //   is the dollar value of rows typed 'Orders', Revenue is the
+  //   dollar value of rows typed 'Revenue'; same LineValue column,
+  //   different Type filter, genuinely two different numbers.
+  {
+    id: 'Revenue',
+    format: 'currency',
+    where: "Type = 'Revenue'",
     sumColumn: 'LineValue'
   }
 ];

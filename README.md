@@ -1,18 +1,19 @@
 # Claude KPI Row — Domo App Studio KPI Dashboard
 
-A drop-in row of 4-6 KPI cards for a Domo custom app, each showing an **MTD value with vs-last-month delta** and a **YTD value with vs-last-year delta**, wired directly to the `BudgetBlindsData` dataset. Built to sit on the same page as the companion **Claude Nav** app (same seafoam theme, same App Code conventions).
+A drop-in row of KPI cards for a Domo custom app, each showing an **MTD value with vs-last-month delta** and a **YTD value with vs-last-year delta**, wired directly to the `BudgetBlindsData` dataset. Built to sit on the same page as the companion **Claude Nav** app (same seafoam theme, same App Code conventions).
 
-- 6 cards in a single row — a full funnel: Leads → Proposals → Orders → Order Amount, plus AOV and Close Rate — wrapping to 3 / 2 / 1 across as the page narrows
+- 7 cards in a single row — a full funnel: Leads → Proposals → Orders → Order Amount → Revenue, plus AOV and Close Rate — auto-wrapping as the page narrows, no hand-tuned breakpoints
 - Each card gets its own accent color as a top bar + tinted icon chip, so a metric is identifiable before you've read the title
 - Big MTD number with a green/red delta pill vs. the same number of days last month
 - Smaller YTD line below a divider, with its own delta vs. the same Jan 1-to-date window last year
+- Transparent page background — only the individual card tiles are solid, so the row sits directly on the Domo dashboard's own background
 - All colors/spacing live as CSS custom properties for easy re-theming
 
 ## Files
 
 ```
 manifest.json   Required by Domo — app metadata, size, and dataset mapping (datasetsMapping)
-index.html      The 6 KPI cards + preview placeholder numbers
+index.html      The 7 KPI cards + preview placeholder numbers
 styles.css      All card styling (CSS variables at the top for easy re-theming)
 app.js          KPI SQL definitions, MTD/YTD date math, and the domo.post wiring
 thumbnail.png   300x300 app icon (required by Domo for card/App Store representation)
@@ -47,7 +48,7 @@ Each card in `index.html` is a `.kpi-card` with:
 - `--kpi-color` (inline style) tints that card's icon chip and top accent bar — independent of the metric it represents, so palette changes are a one-line edit per card
 - `data-mtd-value` / `data-mtd-delta` / `data-ytd-value` / `data-ytd-delta` are the four spans `app.js` overwrites once real numbers load
 
-`app.js`'s `KPI_DEFS` array holds the **four independently-queried** KPIs — Leads, Proposals, Orders, Order Amount. Each entry is a straight port of its Beast Mode into SQL:
+`app.js`'s `KPI_DEFS` array holds the **five independently-queried** KPIs — Leads, Proposals, Orders, Order Amount, Revenue. Each entry is a straight port of its Beast Mode into SQL:
 
 - `where` — the Beast Mode's `CASE WHEN <conditions>`, as a plain SQL `WHERE` clause (e.g. `"Type = 'Orders' AND order_Wo IS NOT NULL AND Category <> 'Spend'"`)
 - `distinctKey` — the Beast Mode's `CONCAT(...)` dedup key, paired with `COUNT(DISTINCT CASE WHEN <window> THEN <key> END)` in the generated SQL
@@ -114,7 +115,7 @@ The modal markup/CSS (`#drilldownModal` in `index.html`) and the click-handler w
 
 ## Real Beast Modes ported so far
 
-The row is a full funnel — **Leads → Proposals → Orders → Order Amount**, plus **AOV** and **Close Rate** as derived ratios — and every card is a real formula, not a placeholder:
+The row is a full funnel — **Leads → Proposals → Orders → Order Amount → Revenue**, plus **AOV** and **Close Rate** as derived ratios — and every card is a real formula, not a placeholder:
 
 | Card | Ported from |
 |---|---|
@@ -122,6 +123,7 @@ The row is a full funnel — **Leads → Proposals → Orders → Order Amount**
 | **Proposals** | `COUNT(DISTINCT CASE WHEN Type='Quotes' AND quote_Number IS NOT NULL AND project_PrimaryQuote=1 AND Category<>'Spend' THEN CONCAT(OrganizationID, OwnerNumber, quote_Number) END)` |
 | **Orders** | "Order Count": `COUNT(DISTINCT CASE WHEN Reporting Period Flag=1 AND Type='Orders' AND order_Wo IS NOT NULL AND Category<>'Spend' THEN CONCAT(OrganizationID, OwnerNumber, order_Wo) END)` |
 | **Order Amount** | `SUM(CASE WHEN Type='Orders' AND order_Wo IS NOT NULL AND Category<>'Spend' THEN LineValue END)` |
+| **Revenue** | `SUM(CASE WHEN Type='Revenue' THEN LineValue END)` — same `LineValue` column as Order Amount, different `Type`, a genuinely different number |
 | **AOV** | "Order Amount Sum / Orders Count" — Order Amount's formula above, divided by Orders' distinct count |
 | **Close Rate** | Not a provided Beast Mode — this app's own placeholder ratio, Orders / Leads, built from the two real distinct-count formulas above instead of a fabricated column |
 
@@ -158,9 +160,9 @@ Note the plural: it's `domo.onFiltersUpdate`, **not** `onFilterUpdate` — sever
 
 ## Re-theming
 
-All shared tokens (background, border, text, seafoam accent) live as CSS custom properties at the top of `styles.css`. Per-card accent colors are set inline via `--kpi-color` on each `.kpi-card` in `index.html`, so recoloring one KPI is a one-line change.
+All shared tokens (background, border, text, seafoam accent) live as CSS custom properties at the top of `styles.css`. Per-card accent colors are set inline via `--kpi-color` on each `.kpi-card` in `index.html`, so recoloring one KPI is a one-line change. `body`'s `background` is `transparent` on purpose — this app is a card on a Domo Studio page, not a standalone page, so it shows the dashboard's own background through it; only the individual `.kpi-card` tiles are solid (`--card-bg`). Revert that one declaration to an opaque color if a given page needs it.
 
 ## Extending
 
-- **More/fewer KPIs:** add or remove an entry in `KPI_DEFS` (`app.js`) and a matching `.kpi-card` block in `index.html`. The grid (`.kpi-row` in `styles.css`) is `repeat(6, ...)` by default — drop it to `repeat(4, ...)` / `repeat(5, ...)` if you're not using all 6 slots and want them full-width instead of leaving gaps.
+- **More/fewer KPIs:** add or remove an entry in `KPI_DEFS` (`app.js`) and a matching `.kpi-card` block in `index.html`. `.kpi-row`'s grid (`styles.css`) is `repeat(auto-fit, minmax(150px, 1fr))`, not a fixed column count, so it sizes itself to however many cards exist and wraps on its own as the card narrows — no breakpoints to hand-tune when the count changes. The row itself is centered via `margin: 0 auto` up to its `max-width: 1400px`, so it doesn't sit flush left on a wider Domo card.
 - **A different comparison window** (e.g. WTD, QTD-vs-prior-quarter): add a case to `getDateRanges()` in `app.js` and a second delta line in the card markup, following the existing MTD/YTD pattern.
